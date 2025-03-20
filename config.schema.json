@@ -1,0 +1,59 @@
+{
+  "pluginAlias": "WLED",
+  "pluginType": "platform",
+  "singular": true,
+  "schema": {
+    "type": "object",
+    "properties": {
+      "name": {
+        "title": "Name",
+        "type": "string",
+        "default": "WLED",
+        "required": true
+      },
+      "devices": {
+        "type": "array",
+        "title": "WLED Devices",
+        "items": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "title": "Name",
+              "type": "string",
+              "required": true
+            },
+            "host": {
+              "title": "IP Address or Hostname",
+              "type": "string",
+              "required": true,
+              "format": "hostname"
+            },
+            "port": {
+              "title": "Port",
+              "type": "integer",
+              "default": 80,
+              "maximum": 65535,
+              "minimum": 1
+            },
+            "useSegments": {
+              "title": "Expose LED Segments as Separate Accessories",
+              "type": "boolean",
+              "default": false
+            },
+            "useTelevisionService": {
+              "title": "Add Television Service to Control Presets",
+              "type": "boolean",
+              "default": true
+            },
+            "pollInterval": {
+              "title": "Status Poll Interval (seconds)",
+              "type": "integer",
+              "default": 10,
+              "minimum": 1
+            }
+          }
+        }
+      }
+    }
+  }
+}

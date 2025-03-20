@@ -1,0 +1,31 @@
+{
+  "bridge": {
+    "name": "Homebridge",
+    "username": "0E:37:DF:88:01:F6",
+    "port": 51826,
+    "pin": "123-45-678"
+  },
+  "accessories": [],
+  "platforms": [
+    {
+      "platform": "WLED",
+      "name": "WLED",
+      "devices": [
+        {
+          "name": "Living Room LEDs",
+          "host": "192.168.1.100",
+          "port": 80,
+          "useSegments": false,
+          "useTelevisionService": true,
+          "pollInterval": 10
+        },
+        {
+          "name": "Bedroom LEDs",
+          "host": "192.168.1.101",
+          "useSegments": true,
+          "pollInterval": 15
+        }
+      ]
+    }
+  ]
+}
