@@ -16,7 +16,8 @@ A Homebridge plugin for controlling WLED-powered LED strips through HomeKit.
 - Television service interface to easily switch between presets
 - Apple TV Remote integration for preset control and brightness adjustment
 - Automatic discovery and configuration
-- Status polling to keep HomeKit in sync with changes made outside of HomeKit
+- Real-time updates via WebSockets for responsive control
+- Fallback to polling for backwards compatibility
 
 ## Installation
 
@@ -61,6 +62,7 @@ Each device in the `devices` array can have the following properties:
 | `port` | HTTP port of the WLED device | 80 | No |
 | `useSegments` | Expose each LED segment as a separate accessory | false | No |
 | `useTelevisionService` | Add Apple TV Remote interface to control presets | true | No |
+| `useWebSockets` | Use WebSockets for real-time updates (requires WLED v0.13+) | true | No |
 | `pollInterval` | How often to poll for state updates (in seconds) | 10 | No |
 
 ## Using Segments
@@ -85,6 +87,17 @@ Features of the TV service:
 - Quickly access your favorite lighting scenes from Control Center
 
 If you don't want to use this feature, you can disable it by setting `useTelevisionService` to `false` in your device configuration.
+
+## WebSocket Support
+
+This plugin uses WebSockets to provide real-time updates from your WLED devices. This offers several benefits:
+
+- Instant state updates when changes are made outside of HomeKit
+- Reduced network traffic compared to polling
+- Lower latency for a more responsive experience
+- Less CPU and memory usage on your server
+
+WebSockets require WLED version 0.13 or newer. If you're using an older version of WLED, the plugin will automatically fall back to polling. You can also disable WebSockets manually by setting `useWebSockets` to `false` in your device configuration.
 
 ## Troubleshooting
 

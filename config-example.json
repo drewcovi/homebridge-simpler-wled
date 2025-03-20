@@ -17,6 +17,7 @@
           "port": 80,
           "useSegments": false,
           "useTelevisionService": true,
+          "useWebSockets": true,
           "pollInterval": 10
         },
         {

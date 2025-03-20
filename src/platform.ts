@@ -74,6 +74,7 @@ export class WLEDPlatform implements DynamicPlatformPlugin {
         device.host,
         device.port || 80,
         device.pollInterval || 10,
+        device.useWebSockets !== false, // Default to true if not specified
       );
 
       this.wledDevices.set(uuid, wledDevice);
@@ -176,6 +177,17 @@ export class WLEDPlatform implements DynamicPlatformPlugin {
 
       if (!isConfigured) {
         this.log.info('Removing existing accessory from cache:', accessory.displayName);
+        
+        // If this is a main device, clean up the WLED device instance
+        const deviceUuid = accessory.UUID;
+        if (this.wledDevices.has(deviceUuid)) {
+          const wledDevice = this.wledDevices.get(deviceUuid);
+          if (wledDevice) {
+            wledDevice.cleanup();
+          }
+          this.wledDevices.delete(deviceUuid);
+        }
+        
         this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
       }
     }

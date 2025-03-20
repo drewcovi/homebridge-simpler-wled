@@ -45,6 +45,11 @@
               "type": "boolean",
               "default": true
             },
+            "useWebSockets": {
+              "title": "Use WebSockets for Real-Time Updates (Requires WLED v0.13+)",
+              "type": "boolean",
+              "default": true
+            },
             "pollInterval": {
               "title": "Status Poll Interval (seconds)",
               "type": "integer",

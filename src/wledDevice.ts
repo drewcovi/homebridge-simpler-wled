@@ -1,5 +1,6 @@
 import { Logger } from 'homebridge';
 import axios from 'axios';
+import WebSocket from 'ws';
 
 export interface WLEDState {
   on: boolean;
@@ -40,7 +41,13 @@ export interface WLEDInfo {
 
 export class WLEDDevice {
   private readonly baseUrl: string;
+  private readonly wsUrl: string;
   private pollTimer?: NodeJS.Timeout;
+  private webSocket?: WebSocket;
+  private reconnectTimer?: NodeJS.Timeout;
+  private reconnectAttempts = 0;
+  private readonly maxReconnectAttempts = 10;
+  private readonly reconnectInterval = 5000; // 5 seconds
   private state: WLEDState = {
     on: false,
     brightness: 0,
@@ -55,20 +62,143 @@ export class WLEDDevice {
   private stateListeners: Array<(state: WLEDState) => void> = [];
   private segments: WLEDSegment[] = [];
   private info?: WLEDInfo;
+  private isConnected = false;
 
   constructor(
     private readonly log: Logger,
     private readonly host: string,
     private readonly port: number,
     private readonly pollInterval: number,
+    private readonly useWebSockets = true,
   ) {
     this.baseUrl = `http://${host}:${port}/json`;
-    this.startPolling();
-
+    this.wsUrl = `ws://${host}:${port}/ws`;
+    
     // Initialize by getting the device information
     this.getDeviceInfo().catch(error => {
       this.log.error('Failed to initialize WLED device:', error);
     });
+    
+    if (this.useWebSockets) {
+      this.connectWebSocket();
+      
+      // Also initialize with a standard HTTP request to ensure we have complete state
+      this.updateStateViaHTTP().catch(error => {
+        this.log.debug('Error during initial HTTP state update:', error);
+      });
+    } else {
+      // Fall back to polling if WebSockets are disabled
+      this.startPolling();
+    }
+  }
+  
+  /**
+   * Connect to the WLED WebSocket API
+   */
+  private connectWebSocket(): void {
+    // Clean up any existing connection
+    this.cleanupWebSocket();
+    
+    this.log.debug(`Connecting to WebSocket at ${this.wsUrl}`);
+    
+    try {
+      this.webSocket = new WebSocket(this.wsUrl);
+      
+      this.webSocket.on('open', () => {
+        this.log.debug('WebSocket connection established');
+        this.isConnected = true;
+        this.reconnectAttempts = 0; // Reset reconnect counter on successful connection
+      });
+      
+      this.webSocket.on('message', (data: WebSocket.Data) => {
+        try {
+          this.handleWebSocketMessage(data);
+        } catch (error) {
+          this.log.error('Error handling WebSocket message:', error);
+        }
+      });
+      
+      this.webSocket.on('error', (error) => {
+        this.log.error('WebSocket error:', error);
+      });
+      
+      this.webSocket.on('close', () => {
+        this.log.debug('WebSocket connection closed');
+        this.isConnected = false;
+        
+        // Attempt to reconnect
+        this.scheduleReconnect();
+      });
+    } catch (error) {
+      this.log.error('Failed to connect to WebSocket:', error);
+      this.scheduleReconnect();
+    }
+  }
+  
+  /**
+   * Clean up WebSocket connection
+   */
+  private cleanupWebSocket(): void {
+    if (this.webSocket) {
+      // Remove all listeners
+      this.webSocket.removeAllListeners();
+      
+      // Close connection if it's open
+      if (this.webSocket.readyState === WebSocket.OPEN) {
+        this.webSocket.close();
+      }
+      
+      this.webSocket = undefined;
+    }
+  }
+  
+  /**
+   * Schedule a reconnection attempt
+   */
+  private scheduleReconnect(): void {
+    // Clear any existing reconnect timer
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+    }
+    
+    // Only attempt to reconnect if we haven't exceeded the maximum attempts
+    if (this.reconnectAttempts < this.maxReconnectAttempts) {
+      this.reconnectAttempts++;
+      
+      const delay = this.reconnectInterval * Math.min(this.reconnectAttempts, 5);
+      this.log.debug(`Scheduling WebSocket reconnection in ${delay}ms (attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
+      
+      this.reconnectTimer = setTimeout(() => {
+        this.connectWebSocket();
+      }, delay);
+    } else {
+      this.log.error(`Failed to reconnect after ${this.maxReconnectAttempts} attempts, falling back to polling`);
+      // Fall back to polling if we can't establish a WebSocket connection
+      this.startPolling();
+    }
+  }
+  
+  /**
+   * Handle incoming WebSocket messages
+   */
+  private handleWebSocketMessage(data: WebSocket.Data): void {
+    // Convert data to string if it's not already
+    const message = data.toString();
+    
+    try {
+      // Parse the JSON message
+      const jsonData = JSON.parse(message);
+      
+      // Check if this is a state update
+      if (jsonData.state) {
+        this.updateStateFromData(jsonData.state);
+      } else if (jsonData.seg !== undefined) {
+        // This might be a segment update only
+        this.updateSegmentsFromData(jsonData);
+      }
+    } catch (error) {
+      this.log.error('Error parsing WebSocket message:', error);
+    }
   }
 
   /**
@@ -82,13 +212,13 @@ export class WLEDDevice {
 
     // Create new poll timer
     this.pollTimer = setInterval(() => {
-      this.updateState().catch(error => {
+      this.updateStateViaHTTP().catch(error => {
         this.log.debug('Error updating WLED state:', error);
       });
     }, this.pollInterval * 1000);
 
     // Do an immediate update
-    this.updateState().catch(error => {
+    this.updateStateViaHTTP().catch(error => {
       this.log.debug('Error during initial WLED state update:', error);
     });
   }
@@ -102,15 +232,47 @@ export class WLEDDevice {
       this.pollTimer = undefined;
     }
   }
+  
+  /**
+   * Clean up resources when device is removed
+   */
+  public cleanup(): void {
+    // Stop polling
+    this.stopPolling();
+    
+    // Clear reconnect timer if it exists
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = undefined;
+    }
+    
+    // Close WebSocket connection
+    this.cleanupWebSocket();
+    
+    // Clear listeners
+    this.stateListeners = [];
+    this.presetListeners = [];
+  }
 
   /**
-   * Update the device state from the WLED API
+   * Update the device state from the WLED HTTP API
    */
-  private async updateState(): Promise<void> {
+  private async updateStateViaHTTP(): Promise<void> {
     try {
       const response = await axios.get(`${this.baseUrl}/state`);
       const data = response.data;
-
+      this.updateStateFromData(data);
+    } catch (error) {
+      this.log.debug('Failed to fetch WLED state via HTTP:', error);
+      throw error;
+    }
+  }
+  
+  /**
+   * Update state from data (used by both HTTP and WebSocket)
+   */
+  private updateStateFromData(data: any): void {
+    try {
       // Parse the state response
       this.state = {
         on: data.on === true,
@@ -143,19 +305,31 @@ export class WLEDDevice {
       this.state.saturation = s;
 
       // Update segment info if available
-      if (data.seg && Array.isArray(data.seg)) {
-        this.segments = data.seg.map((segment: any, index: number) => ({
-          id: index,
-          name: segment.n || `Segment ${index}`,
-          start: segment.start,
-          stop: segment.stop,
-          length: segment.stop - segment.start,
-          colors: segment.col || [],
-          brightness: segment.bri !== undefined ? Math.round((segment.bri / 255) * 100) : 0,
-          on: segment.on === true,
-          selected: segment.sel === true,
-        }));
-      }
+      this.updateSegmentsFromData(data);
+
+      // Notify listeners
+      this.notifyListeners();
+    } catch (error) {
+      this.log.error('Error updating state from data:', error);
+    }
+  }
+  
+  /**
+   * Update segments information from data
+   */
+  private updateSegmentsFromData(data: any): void {
+    if (data.seg && Array.isArray(data.seg)) {
+      this.segments = data.seg.map((segment: any, index: number) => ({
+        id: index,
+        name: segment.n || `Segment ${index}`,
+        start: segment.start,
+        stop: segment.stop,
+        length: segment.stop - segment.start,
+        colors: segment.col || [],
+        brightness: segment.bri !== undefined ? Math.round((segment.bri / 255) * 100) : 0,
+        on: segment.on === true,
+        selected: segment.sel === true,
+      }));
 
       // Update segment states if they exist
       if (this.segments.length > 0) {
@@ -180,12 +354,6 @@ export class WLEDDevice {
           };
         });
       }
-
-      // Notify listeners
-      this.notifyListeners();
-    } catch (error) {
-      this.log.debug('Failed to fetch WLED state:', error);
-      throw error;
     }
   }
 
@@ -332,11 +500,41 @@ export class WLEDDevice {
   }
 
   /**
+   * Send a state update via the WebSocket connection
+   */
+  private sendWebSocketUpdate(payload: any): void {
+    if (this.webSocket && this.webSocket.readyState === WebSocket.OPEN) {
+      try {
+        this.webSocket.send(JSON.stringify(payload));
+        return; // Success - no need to continue
+      } catch (error) {
+        this.log.debug('Error sending WebSocket message, falling back to HTTP:', error);
+        // Fall through to HTTP method
+      }
+    }
+    
+    // If WebSocket not available or send failed, fall back to HTTP
+    axios.post(`${this.baseUrl}/state`, payload).catch(error => {
+      this.log.error('Failed to send state update via HTTP:', error);
+    });
+  }
+  
+  /**
    * Set the on/off state
    */
   public async setPower(on: boolean): Promise<void> {
     try {
-      await axios.post(`${this.baseUrl}/state`, { on });
+      const payload = { on };
+      
+      // If WebSockets are enabled and connected, use that
+      if (this.useWebSockets && this.isConnected) {
+        this.sendWebSocketUpdate(payload);
+      } else {
+        // Otherwise use HTTP
+        await axios.post(`${this.baseUrl}/state`, payload);
+      }
+      
+      // Update local state immediately for responsiveness
       this.state.on = on;
       this.notifyListeners();
     } catch (error) {
@@ -350,12 +548,20 @@ export class WLEDDevice {
    */
   public async setSegmentPower(segmentIndex: number, on: boolean): Promise<void> {
     try {
-      await axios.post(`${this.baseUrl}/state`, {
+      const payload = {
         seg: {
           id: segmentIndex,
           on,
         },
-      });
+      };
+      
+      // If WebSockets are enabled and connected, use that
+      if (this.useWebSockets && this.isConnected) {
+        this.sendWebSocketUpdate(payload);
+      } else {
+        // Otherwise use HTTP
+        await axios.post(`${this.baseUrl}/state`, payload);
+      }
       
       // Update local state for the segment
       if (this.state.segmentState && this.state.segmentState[segmentIndex]) {
@@ -376,7 +582,17 @@ export class WLEDDevice {
     try {
       // Convert 0-100 to 0-255
       const bri = Math.max(0, Math.min(255, Math.round((brightness / 100) * 255)));
-      await axios.post(`${this.baseUrl}/state`, { bri });
+      const payload = { bri };
+      
+      // If WebSockets are enabled and connected, use that
+      if (this.useWebSockets && this.isConnected) {
+        this.sendWebSocketUpdate(payload);
+      } else {
+        // Otherwise use HTTP
+        await axios.post(`${this.baseUrl}/state`, payload);
+      }
+      
+      // Update local state immediately for responsiveness
       this.state.brightness = brightness;
       this.notifyListeners();
     } catch (error) {
@@ -392,13 +608,20 @@ export class WLEDDevice {
     try {
       // Convert 0-100 to 0-255
       const bri = Math.max(0, Math.min(255, Math.round((brightness / 100) * 255)));
-      
-      await axios.post(`${this.baseUrl}/state`, {
+      const payload = {
         seg: {
           id: segmentIndex,
           bri,
         },
-      });
+      };
+      
+      // If WebSockets are enabled and connected, use that
+      if (this.useWebSockets && this.isConnected) {
+        this.sendWebSocketUpdate(payload);
+      } else {
+        // Otherwise use HTTP
+        await axios.post(`${this.baseUrl}/state`, payload);
+      }
       
       // Update local state for the segment
       if (this.state.segmentState && this.state.segmentState[segmentIndex]) {
@@ -417,13 +640,22 @@ export class WLEDDevice {
    */
   public async setColor(r: number, g: number, b: number): Promise<void> {
     try {
-      await axios.post(`${this.baseUrl}/state`, {
+      const payload = {
         seg: {
           id: 0,
           col: [[r, g, b]],
         },
-      });
+      };
       
+      // If WebSockets are enabled and connected, use that
+      if (this.useWebSockets && this.isConnected) {
+        this.sendWebSocketUpdate(payload);
+      } else {
+        // Otherwise use HTTP
+        await axios.post(`${this.baseUrl}/state`, payload);
+      }
+      
+      // Update local state immediately for responsiveness
       this.state.color = { r, g, b };
       const { h, s } = this.rgbToHsv(r, g, b);
       this.state.hue = h;
@@ -442,12 +674,20 @@ export class WLEDDevice {
    */
   public async setSegmentColor(segmentIndex: number, r: number, g: number, b: number): Promise<void> {
     try {
-      await axios.post(`${this.baseUrl}/state`, {
+      const payload = {
         seg: {
           id: segmentIndex,
           col: [[r, g, b]],
         },
-      });
+      };
+      
+      // If WebSockets are enabled and connected, use that
+      if (this.useWebSockets && this.isConnected) {
+        this.sendWebSocketUpdate(payload);
+      } else {
+        // Otherwise use HTTP
+        await axios.post(`${this.baseUrl}/state`, payload);
+      }
       
       // Update local state for the segment
       if (this.state.segmentState && this.state.segmentState[segmentIndex]) {
@@ -525,7 +765,7 @@ export class WLEDDevice {
       }
 
       // Otherwise, force an update to get the segments
-      await this.updateState();
+      await this.updateStateViaHTTP();
       return this.segments;
     } catch (error) {
       this.log.error('Failed to get segments:', error);
@@ -554,12 +794,20 @@ export class WLEDDevice {
    */
   public async setEffect(effectIndex: number): Promise<void> {
     try {
-      await axios.post(`${this.baseUrl}/state`, {
+      const payload = {
         seg: {
           id: 0,
           fx: effectIndex,
         },
-      });
+      };
+      
+      // If WebSockets are enabled and connected, use that
+      if (this.useWebSockets && this.isConnected) {
+        this.sendWebSocketUpdate(payload);
+      } else {
+        // Otherwise use HTTP
+        await axios.post(`${this.baseUrl}/state`, payload);
+      }
       
       this.state.effect = effectIndex;
       this.notifyListeners();
@@ -574,12 +822,20 @@ export class WLEDDevice {
    */
   public async setSegmentEffect(segmentIndex: number, effectIndex: number): Promise<void> {
     try {
-      await axios.post(`${this.baseUrl}/state`, {
+      const payload = {
         seg: {
           id: segmentIndex,
           fx: effectIndex,
         },
-      });
+      };
+      
+      // If WebSockets are enabled and connected, use that
+      if (this.useWebSockets && this.isConnected) {
+        this.sendWebSocketUpdate(payload);
+      } else {
+        // Otherwise use HTTP
+        await axios.post(`${this.baseUrl}/state`, payload);
+      }
       
       // Update local state if needed
       this.notifyListeners();
@@ -683,13 +939,27 @@ export class WLEDDevice {
    */
   public async activatePreset(presetId: number): Promise<void> {
     try {
-      await axios.post(`${this.baseUrl}/state`, { ps: presetId });
+      const payload = { ps: presetId };
+      
+      // If WebSockets are enabled and connected, use that
+      if (this.useWebSockets && this.isConnected) {
+        this.sendWebSocketUpdate(payload);
+      } else {
+        // Otherwise use HTTP
+        await axios.post(`${this.baseUrl}/state`, payload);
+      }
+      
       this.activePresetId = presetId;
       this.state.presetId = presetId;
       this.notifyListeners();
       
       // Update the state as preset activation might change multiple properties
-      await this.updateState();
+      if (this.useWebSockets && this.isConnected) {
+        // WebSocket will provide updates automatically
+      } else {
+        // Use HTTP to update state
+        await this.updateStateViaHTTP();
+      }
     } catch (error) {
       this.log.error('Failed to activate preset:', error);
       throw error;
