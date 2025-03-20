@@ -40,8 +40,8 @@
               "type": "boolean",
               "default": false
             },
-            "useTelevisionService": {
-              "title": "Add Television Service to Control Presets",
+            "usePresetService": {
+              "title": "Add Preset Controls Service",
               "type": "boolean",
               "default": true
             },

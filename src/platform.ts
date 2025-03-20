@@ -2,7 +2,7 @@ import { API, DynamicPlatformPlugin, Logger, PlatformAccessory, PlatformConfig, 
 import { PLATFORM_NAME, PLUGIN_NAME } from './settings';
 import { WLEDAccessory } from './platformAccessory';
 import { WLEDSegmentAccessory } from './segmentAccessory';
-import { WLEDTelevisionAccessory } from './televisionAccessory';
+import { WLEDPresetAccessory } from './presetAccessory';
 import { WLEDDevice } from './wledDevice';
 
 /**
@@ -139,25 +139,25 @@ export class WLEDPlatform implements DynamicPlatformPlugin {
           });
         }
         
-        // Create television accessory for preset control if enabled
-        if (device.useTelevisionService !== false) { // Default to true if not specified
-          const tvUuid = this.api.hap.uuid.generate(`${device.host}-tv`);
-          const tvName = `${device.name} Presets`;
+        // Create preset accessory for preset control if enabled
+        if (device.usePresetService !== false) { // Default to true if not specified
+          const presetUuid = this.api.hap.uuid.generate(`${device.host}-presets`);
+          const presetName = `${device.name} Presets`;
           
-          const existingTvAccessory = this.accessories.find(accessory => accessory.UUID === tvUuid);
+          const existingPresetAccessory = this.accessories.find(accessory => accessory.UUID === presetUuid);
 
-          if (existingTvAccessory) {
-            this.log.info('Restoring existing TV accessory from cache:', existingTvAccessory.displayName);
-            new WLEDTelevisionAccessory(this, existingTvAccessory, wledDevice);
-            this.api.updatePlatformAccessories([existingTvAccessory]);
+          if (existingPresetAccessory) {
+            this.log.info('Restoring existing preset accessory from cache:', existingPresetAccessory.displayName);
+            new WLEDPresetAccessory(this, existingPresetAccessory, wledDevice);
+            this.api.updatePlatformAccessories([existingPresetAccessory]);
           } else {
-            this.log.info('Adding new TV accessory for presets:', tvName);
-            const tvAccessory = new this.api.platformAccessory(tvName, tvUuid);
-            tvAccessory.context.device = device;
-            tvAccessory.category = this.api.hap.Categories.TELEVISION;
+            this.log.info('Adding new preset accessory:', presetName);
+            const presetAccessory = new this.api.platformAccessory(presetName, presetUuid);
+            presetAccessory.context.device = device;
+            presetAccessory.category = this.api.hap.Categories.SWITCH;
             
-            new WLEDTelevisionAccessory(this, tvAccessory, wledDevice);
-            this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [tvAccessory]);
+            new WLEDPresetAccessory(this, presetAccessory, wledDevice);
+            this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [presetAccessory]);
           }
         }
       }
@@ -172,7 +172,7 @@ export class WLEDPlatform implements DynamicPlatformPlugin {
         this.api.hap.uuid.generate(configuredDevice.host) === accessory.UUID || 
         (accessory.context.segmentIndex !== undefined && 
           this.api.hap.uuid.generate(`${configuredDevice.host}-segment-${accessory.context.segmentIndex}`) === accessory.UUID) ||
-        this.api.hap.uuid.generate(`${configuredDevice.host}-tv`) === accessory.UUID
+        this.api.hap.uuid.generate(`${configuredDevice.host}-presets`) === accessory.UUID
       );
 
       if (!isConfigured) {

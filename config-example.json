@@ -16,7 +16,7 @@
           "host": "192.168.1.100",
           "port": 80,
           "useSegments": false,
-          "useTelevisionService": true,
+          "usePresetService": true,
           "useWebSockets": true,
           "pollInterval": 10
         },

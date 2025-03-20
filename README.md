@@ -13,8 +13,8 @@ A Homebridge plugin for controlling WLED-powered LED strips through HomeKit.
 - Brightness control
 - Color (RGB/HSV) control
 - Support for WLED segments as individual accessories
-- Television service interface to easily switch between presets
-- Apple TV Remote integration for preset control and brightness adjustment
+- Integrated preset selector for easy access to saved presets
+- Individual switch controls for each WLED preset
 - Automatic discovery and configuration
 - Real-time updates via WebSockets for responsive control
 - Fallback to polling for backwards compatibility
@@ -61,7 +61,7 @@ Each device in the `devices` array can have the following properties:
 | `host` | IP address or hostname of the WLED device | - | Yes |
 | `port` | HTTP port of the WLED device | 80 | No |
 | `useSegments` | Expose each LED segment as a separate accessory | false | No |
-| `useTelevisionService` | Add Apple TV Remote interface to control presets | true | No |
+| `usePresetService` | Add preset selector controls | true | No |
 | `useWebSockets` | Use WebSockets for real-time updates (requires WLED v0.13+) | true | No |
 | `pollInterval` | How often to poll for state updates (in seconds) | 10 | No |
 
@@ -74,19 +74,20 @@ This is useful for:
 - Creating different zones in a room
 - Complex lighting setups
 
-## Using the Television Service
+## Using the Preset Service
 
-By default, this plugin creates a Television accessory for each WLED device. This provides a convenient way to switch between WLED presets using the Apple TV remote interface in the Home app.
+By default, this plugin creates a Preset accessory for each WLED device. This provides a convenient way to switch between WLED presets directly from HomeKit.
 
-Features of the TV service:
-- Each WLED preset appears as an "input source" (like a channel)
-- Use the Apple TV remote in Control Center to:
-  - Switch between different presets
-  - Control WLED brightness with the volume buttons
-  - Turn the WLED device on/off
-- Quickly access your favorite lighting scenes from Control Center
+Features of the Preset service:
+- Each WLED preset appears as a switch in HomeKit
+- Turning on a preset switch activates that preset on your WLED device
+- The main light service provides power and brightness control
+- Easily organize presets in the Home app or Control Center
+- Control presets directly through Siri
 
-If you don't want to use this feature, you can disable it by setting `useTelevisionService` to `false` in your device configuration.
+The preset service reads presets directly from your WLED device and updates automatically when presets are added, modified or removed on the WLED device.
+
+If you don't want to use this feature, you can disable it by setting `usePresetService` to `false` in your device configuration.
 
 ## WebSocket Support
 
