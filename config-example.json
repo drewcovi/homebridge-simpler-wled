@@ -1,32 +1,39 @@
 {
   "bridge": {
     "name": "Homebridge",
-    "username": "0E:37:DF:88:01:F6",
+    "username": "0E:97:04:C2:35:B2",
     "port": 51826,
     "pin": "123-45-678"
   },
-  "accessories": [],
+  "description": "Example configuration for homebridge-wled-ts",
   "platforms": [
     {
-      "platform": "WLED",
       "name": "WLED",
-      "devices": [
-        {
-          "name": "Living Room LEDs",
-          "host": "192.168.1.100",
-          "port": 80,
-          "useSegments": false,
-          "usePresetService": true,
-          "useWebSockets": true,
-          "pollInterval": 10
-        },
-        {
-          "name": "Bedroom LEDs",
-          "host": "192.168.1.101",
-          "useSegments": true,
-          "pollInterval": 15
-        }
-      ]
+      "platform": "WLED",
+      "discoverySection": {
+        "autoDiscover": true
+      },
+      "defaultSettingsSection": {
+        "defaultUseSegments": false,
+        "defaultUsePresetService": true,
+        "defaultUseWebSockets": true,
+        "defaultPollInterval": 10
+      },
+      "manualDevicesSection": {
+        "devices": [
+          {
+            "name": "WLED Strip",
+            "host": "192.168.1.123",
+            "port": 80,
+            "deviceSettings": {
+              "useSegments": true,
+              "usePresetService": true,
+              "useWebSockets": true,
+              "pollInterval": 5
+            }
+          }
+        ]
+      }
     }
   ]
 }

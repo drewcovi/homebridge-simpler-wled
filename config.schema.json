@@ -2,6 +2,8 @@
   "pluginAlias": "WLED",
   "pluginType": "platform",
   "singular": true,
+  "headerDisplay": "Homebridge plugin for WLED - control your WLED-powered LED strips through HomeKit",
+  "footerDisplay": "For more information, see the [WLED website](https://kno.wled.ge/) and [GitHub repository](https://github.com/drewcovi/homebridge-wled-ts).",
   "schema": {
     "type": "object",
     "properties": {
@@ -11,50 +13,110 @@
         "default": "WLED",
         "required": true
       },
-      "devices": {
-        "type": "array",
-        "title": "WLED Devices",
-        "items": {
-          "type": "object",
-          "properties": {
-            "name": {
-              "title": "Name",
-              "type": "string",
-              "required": true
-            },
-            "host": {
-              "title": "IP Address or Hostname",
-              "type": "string",
-              "required": true,
-              "format": "hostname"
-            },
-            "port": {
-              "title": "Port",
-              "type": "integer",
-              "default": 80,
-              "maximum": 65535,
-              "minimum": 1
-            },
-            "useSegments": {
-              "title": "Expose LED Segments as Separate Accessories",
-              "type": "boolean",
-              "default": false
-            },
-            "usePresetService": {
-              "title": "Add Preset Controls Service",
-              "type": "boolean",
-              "default": true
-            },
-            "useWebSockets": {
-              "title": "Use WebSockets for Real-Time Updates (Requires WLED v0.13+)",
-              "type": "boolean",
-              "default": true
-            },
-            "pollInterval": {
-              "title": "Status Poll Interval (seconds)",
-              "type": "integer",
-              "default": 10,
-              "minimum": 1
+      "discoverySection": {
+        "title": "Discovery Settings",
+        "type": "object",
+        "properties": {
+          "autoDiscover": {
+            "title": "Automatically Discover WLED Devices",
+            "description": "Automatically discover and add WLED devices found on your network",
+            "type": "boolean",
+            "default": true
+          }
+        }
+      },
+      "defaultSettingsSection": {
+        "title": "Default Settings for Auto-Discovered Devices",
+        "type": "object",
+        "properties": {
+          "defaultUseSegments": {
+            "title": "Expose LED Segments",
+            "description": "Create separate accessories for LED segments on automatically discovered devices",
+            "type": "boolean",
+            "default": false
+          },
+          "defaultUsePresetService": {
+            "title": "Add Preset Controls",
+            "description": "Create preset control accessory for automatically discovered devices",
+            "type": "boolean",
+            "default": true
+          },
+          "defaultUseWebSockets": {
+            "title": "Use WebSockets",
+            "description": "Use WebSockets for real-time updates on automatically discovered devices (requires WLED v0.13+)",
+            "type": "boolean",
+            "default": true
+          },
+          "defaultPollInterval": {
+            "title": "Poll Interval (seconds)",
+            "description": "Status polling interval in seconds for automatically discovered devices (if WebSockets not available)",
+            "type": "integer",
+            "default": 10,
+            "minimum": 1
+          }
+        }
+      },
+      "manualDevicesSection": {
+        "title": "Manual Device Configuration",
+        "type": "object",
+        "properties": {
+          "devices": {
+            "type": "array",
+            "title": "Manually Configured WLED Devices",
+            "description": "Manually add WLED devices that cannot be auto-discovered or require custom settings",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "title": "Name",
+                  "type": "string",
+                  "required": true
+                },
+                "host": {
+                  "title": "IP Address or Hostname",
+                  "type": "string",
+                  "required": true,
+                  "format": "hostname"
+                },
+                "port": {
+                  "title": "Port",
+                  "type": "integer",
+                  "default": 80,
+                  "maximum": 65535,
+                  "minimum": 1
+                },
+                "deviceSettings": {
+                  "type": "object",
+                  "title": "Device Settings",
+                  "properties": {
+                    "useSegments": {
+                      "title": "Expose LED Segments",
+                      "description": "Expose each LED segment as a separate accessory",
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "usePresetService": {
+                      "title": "Add Preset Controls",
+                      "description": "Create preset control accessory for this device",
+                      "type": "boolean",
+                      "default": true
+                    },
+                    "useWebSockets": {
+                      "title": "Use WebSockets",
+                      "description": "Use WebSockets for real-time updates (requires WLED v0.13+)",
+                      "type": "boolean",
+                      "default": true
+                    },
+                    "pollInterval": {
+                      "title": "Poll Interval (seconds)",
+                      "description": "Status polling interval in seconds (if WebSockets not available)",
+                      "type": "integer",
+                      "default": 10,
+                      "minimum": 1
+                    }
+                  }
+                }
+              }
             }
           }
         }

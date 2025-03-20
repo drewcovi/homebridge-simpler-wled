@@ -15,7 +15,7 @@ A Homebridge plugin for controlling WLED-powered LED strips through HomeKit.
 - Support for WLED segments as individual accessories
 - Integrated preset selector for easy access to saved presets
 - Individual switch controls for each WLED preset
-- Automatic discovery and configuration
+- Automatic discovery and configuration of WLED devices on your network
 - Real-time updates via WebSockets for responsive control
 - Fallback to polling for backwards compatibility
 
@@ -23,17 +23,50 @@ A Homebridge plugin for controlling WLED-powered LED strips through HomeKit.
 
 1. Install Homebridge if you haven't already using the [official instructions](https://github.com/homebridge/homebridge/wiki).
 2. Install this plugin: `npm install -g homebridge-wled-ts`
-3. Update your Homebridge configuration to add WLED devices (see Configuration below).
+3. Configure the plugin using one of the methods below.
 4. Restart Homebridge.
 
 ## Configuration
 
-Add the following to the `platforms` section of your Homebridge `config.json`:
+### Using Homebridge Config UI X
+
+If you're using [Homebridge Config UI X](https://github.com/oznu/homebridge-config-ui-x), you can configure this plugin directly through the web interface:
+
+1. Navigate to the Plugins tab
+2. Find the WLED plugin and click Settings
+3. Configure your settings:
+   - Enable/disable auto-discovery
+   - Set default configuration for discovered devices
+   - Manually add devices with custom settings
+4. Click Save to apply your changes
+
+### Manual Configuration
+
+#### Automatic Discovery
+
+The plugin will automatically discover WLED devices on your network. Simply add the platform to your config:
 
 ```json
 {
   "platform": "WLED",
   "name": "WLED",
+  "autoDiscover": true
+}
+```
+
+### Manual Configuration
+
+If you need more control or have WLED devices that can't be discovered automatically, you can manually configure them:
+
+```json
+{
+  "platform": "WLED",
+  "name": "WLED",
+  "autoDiscover": true,
+  "defaultUseSegments": false,
+  "defaultUsePresetService": true,
+  "defaultUseWebSockets": true,
+  "defaultPollInterval": 10,
   "devices": [
     {
       "name": "Living Room LEDs",
@@ -51,7 +84,20 @@ Add the following to the `platforms` section of your Homebridge `config.json`:
 }
 ```
 
-### Configuration Options
+### Platform Configuration Options
+
+The platform supports the following options:
+
+| Property | Description | Default | Required |
+|----------|-------------|---------|----------|
+| `name` | Name of the platform in HomeKit | `"WLED"` | Yes |
+| `autoDiscover` | Enable automatic discovery of WLED devices | `true` | No |
+| `defaultUseSegments` | Expose LED segments for auto-discovered devices | `false` | No |
+| `defaultUsePresetService` | Add preset controls for auto-discovered devices | `true` | No |
+| `defaultUseWebSockets` | Use WebSockets for auto-discovered devices | `true` | No |
+| `defaultPollInterval` | Default polling interval for auto-discovered devices | `10` | No |
+
+### Device Configuration Options
 
 Each device in the `devices` array can have the following properties:
 
@@ -100,22 +146,43 @@ This plugin uses WebSockets to provide real-time updates from your WLED devices.
 
 WebSockets require WLED version 0.13 or newer. If you're using an older version of WLED, the plugin will automatically fall back to polling. You can also disable WebSockets manually by setting `useWebSockets` to `false` in your device configuration.
 
+## Discovery Methods
+
+The plugin uses multiple methods to discover WLED devices on your network:
+
+1. **mDNS (Bonjour)** - Discovers WLED devices that advertise themselves using the mDNS protocol
+2. **SSDP (UPnP)** - Discovers WLED devices that respond to Simple Service Discovery Protocol queries
+3. **Manual configuration** - For devices that cannot be discovered automatically
+
+The automatic discovery process runs when Homebridge starts and periodically afterward to find new devices.
+
 ## Troubleshooting
+
+### Automatic Discovery Not Working
+
+- Ensure your WLED devices are on the same network as your Homebridge server
+- Check that your network allows mDNS and SSDP traffic (some routers block this)
+- Update your WLED firmware to the latest version
+- Try adding the device manually using its IP address
 
 ### Device Not Responding
 
 - Ensure your WLED device is on the same network as your Homebridge server
 - Verify that you can access the WLED web interface at `http://<your-device-ip>`
 - Check that the correct IP address and port are configured
+- If using DHCP, consider setting a static IP for your WLED device
 
 ### HomeKit Not Updating
 
-- Increase the `pollInterval` to get more frequent updates
+- Enable WebSockets if you're using WLED v0.13 or newer
+- Decrease the `pollInterval` to get more frequent updates
 - Restart the WLED device and Homebridge
 
 ### Performance Issues
 
 - If you have many WLED devices or segments, increase the `pollInterval` to reduce network traffic
+- Use WebSockets instead of polling when possible
+- Disable automatic discovery if you're not adding new devices regularly
 
 ## Development
 
