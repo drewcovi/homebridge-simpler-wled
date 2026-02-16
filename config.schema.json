@@ -9,12 +9,6 @@
   "schema": {
     "type": "object",
     "properties": {
-      "name": {
-        "title": "Name",
-        "type": "string",
-        "default": "WLED",
-        "required": true
-      },
       "logLevel": {
         "title": "Log Level",
         "type": "string",
@@ -88,16 +82,15 @@
             "description": "Manually add WLED devices that cannot be auto-discovered or require custom settings",
             "items": {
               "type": "object",
+              "required": ["name","host"],
               "properties": {
                 "name": {
                   "title": "Name",
-                  "type": "string",
-                  "required": true
+                  "type": "string"
                 },
                 "host": {
                   "title": "IP Address or Hostname",
                   "type": "string",
-                  "required": true,
                   "format": "hostname"
                 },
                 "port": {
