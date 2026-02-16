@@ -5,7 +5,7 @@ describe('Settings', () => {
     it('should export PLATFORM_NAME', () => {
       expect(PLATFORM_NAME).toBeDefined();
       expect(typeof PLATFORM_NAME).toBe('string');
-      expect(PLATFORM_NAME).toBe('WLED');
+      expect(PLATFORM_NAME).toBe('Simpler WLED');
     });
 
     it('should export PLUGIN_NAME', () => {

@@ -207,7 +207,7 @@ export class WLEDPlatform implements DynamicPlatformPlugin {
         const existingAccessory = this.accessories.find(accessory => accessory.UUID === uuid);
         if (existingAccessory) {
           this.log.info(`Unregistering disabled device: ${device.name}`);
-          this.api.unregisterPlatformAccessories('homebridge-simpler-wled', 'WLEDTS', [existingAccessory]);
+          this.api.unregisterPlatformAccessories('homebridge-simpler-wled', 'SWLED', [existingAccessory]);
         }
 
         continue;
