@@ -8,12 +8,12 @@
   "footerDisplay": "For more information, see the [WLED website](https://kno.wled.ge/) and [GitHub repository](https://github.com/drewcovi/homebridge-simpler-wled).",
   "schema": {
     "type": "object",
+    "required": ["name"],
     "properties": {
       "name": {
-        "title": "Name",
+        "title": "Plugin Name",
         "type": "string",
-        "default": "Simpler WLED",
-        "required": true
+        "default": "Simpler WLED"
       },
       "logLevel": {
         "title": "Log Level",
