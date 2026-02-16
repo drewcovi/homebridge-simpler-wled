@@ -23,7 +23,7 @@ A Homebridge plugin for controlling WLED-powered LED strips through HomeKit.
 ## Installation
 
 1. Install Homebridge if you haven't already using the [official instructions](https://github.com/homebridge/homebridge/wiki).
-2. Install this plugin: `npm install -g homebridge-wled-ts`
+2. Install this plugin: `npm install -g homebridge-simpler-wled`
 3. Configure the plugin using one of the methods below.
 4. Restart Homebridge.
 

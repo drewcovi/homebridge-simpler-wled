@@ -183,7 +183,7 @@ class PluginUiServer extends HomebridgePluginUiServer {
 
       // Filter for WLED plugin accessories
       const wledAccessories = cachedData.filter((accessory: any) =>
-        accessory.plugin === 'homebridge-wled-ts' ||
+        accessory.plugin === 'homebridge-simpler-wled' ||
         accessory.platform === 'WLED'
       );
 

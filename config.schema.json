@@ -5,7 +5,7 @@
   "customUi": true,
   "customUiPath": "./dist/homebridge-ui",
   "headerDisplay": "Homebridge plugin for WLED - control your WLED-powered LED strips through HomeKit",
-  "footerDisplay": "For more information, see the [WLED website](https://kno.wled.ge/) and [GitHub repository](https://github.com/drewcovi/homebridge-wled-ts).",
+  "footerDisplay": "For more information, see the [WLED website](https://kno.wled.ge/) and [GitHub repository](https://github.com/drewcovi/homebridge-simpler-wled).",
   "schema": {
     "type": "object",
     "properties": {

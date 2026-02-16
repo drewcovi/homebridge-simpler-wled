@@ -11,7 +11,7 @@ describe('Settings', () => {
     it('should export PLUGIN_NAME', () => {
       expect(PLUGIN_NAME).toBeDefined();
       expect(typeof PLUGIN_NAME).toBe('string');
-      expect(PLUGIN_NAME).toBe('homebridge-wled-ts');
+      expect(PLUGIN_NAME).toBe('homebridge-simpler-wled');
     });
 
     it('should not be empty strings', () => {
