@@ -85,8 +85,8 @@ Complete configuration showing all available options:
 
 ```json
 {
-  "platform": "WLED",
-  "name": "WLED",
+  "platform": "Simpler WLED",
+  "name": "Simpler WLED",
   "logLevel": "info",
   "defaultPollInterval": 10,
   "defaultSettingsSection": {
