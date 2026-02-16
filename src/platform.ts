@@ -60,34 +60,63 @@ export class WLEDPlatform implements DynamicPlatformPlugin {
   }
   
   /**
+   * Extract a friendly display name from the hostname
+   */
+  private getDisplayNameFromHost(host: string, fallbackName: string): string {
+    // Remove .local suffix
+    let name = host.replace(/\.local$/i, '');
+
+    // If it's an IP address, use the fallback name
+    if (/^\d+\.\d+\.\d+\.\d+$/.test(name)) {
+      return fallbackName;
+    }
+
+    // Convert hostname to title case (e.g., "holiday-lights" -> "Holiday Lights")
+    return name
+      .split('-')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+  }
+
+  /**
    * Handle newly discovered WLED devices
    */
   private handleDiscoveredDevices(devices: DiscoveredWLEDDevice[]): void {
     this.log.info(`Discovered ${devices.length} WLED devices on the network`);
-    
+
+    // Log all discovered devices for debugging
+    for (const device of devices) {
+      this.log.debug(`Discovery found: ${device.name} at ${device.host}:${device.port} (ID: ${device.id}, Method: ${device.discoveryMethod})`);
+    }
+
     // Process each discovered device
     for (const device of devices) {
       // Skip if this device is already manually configured
       const manualDevices = this.config.devices || [];
-      const isManuallyConfigured = manualDevices.some((d: any) => 
+      const isManuallyConfigured = manualDevices.some((d: any) =>
         d.host === device.host || (d.name && d.name === device.name)
       );
-      
+
       if (isManuallyConfigured) {
-        this.log.debug(`Skipping discovered device ${device.name} as it's already manually configured`);
+        this.log.info(`Skipping discovered device ${device.name} at ${device.host} - already manually configured`);
         continue;
       }
-      
-      // Generate UUID for this device
+
+      // Generate UUID for this device based on host
       const uuid = this.api.hap.uuid.generate(device.host);
-      
+      this.log.debug(`Generated UUID ${uuid} for device ${device.name} (host: ${device.host})`);
+
       // Check if we already know about this device
       if (this.wledDevices.has(uuid)) {
+        this.log.info(`Skipping discovered device ${device.name} at ${device.host} - accessory already exists with this UUID`);
         continue;
       }
-      
-      this.log.info(`Adding discovered WLED device: ${device.name} at ${device.host}:${device.port}`);
-      
+
+      // Generate a display name from the hostname
+      const displayName = this.getDisplayNameFromHost(device.host, device.name);
+
+      this.log.info(`Adding discovered WLED device: ${displayName} at ${device.host}:${device.port}`);
+
       // Get settings from either nested or flat config structure
       const defaultSettings = this.config.defaultSettingsSection || {};
       const defaultPollInterval = defaultSettings.defaultPollInterval !== undefined
@@ -96,7 +125,7 @@ export class WLEDPlatform implements DynamicPlatformPlugin {
       const defaultUseWebSockets = defaultSettings.defaultUseWebSockets !== undefined
         ? defaultSettings.defaultUseWebSockets
         : this.config.defaultUseWebSockets !== false;
-        
+
       // Create the WLED device instance
       const wledDevice = new WLEDDevice(
         this.log,
@@ -105,31 +134,31 @@ export class WLEDPlatform implements DynamicPlatformPlugin {
         defaultPollInterval,
         defaultUseWebSockets,
       );
-      
+
       this.wledDevices.set(uuid, wledDevice);
-      
+
       // See if an accessory with the same uuid has already been registered and restored
       const existingAccessory = this.accessories.find(accessory => accessory.UUID === uuid);
-      
+
       if (existingAccessory) {
         // The accessory already exists
         this.log.info('Restoring existing accessory from cache:', existingAccessory.displayName);
-        
-        // Update name if it's changed
-        if (existingAccessory.displayName !== device.name) {
-          existingAccessory.displayName = device.name;
+
+        // Update name to match hostname
+        if (existingAccessory.displayName !== displayName) {
+          existingAccessory.displayName = displayName;
         }
-        
+
         // Create the accessory handler
         new WLEDAccessory(this, existingAccessory, wledDevice);
-        
+
         // Update accessory cache
         this.api.updatePlatformAccessories([existingAccessory]);
       } else {
         // Create a new accessory
-        this.log.info('Adding new accessory:', device.name);
-        
-        const accessory = new this.api.platformAccessory(device.name, uuid);
+        this.log.info('Adding new accessory:', displayName);
+
+        const accessory = new this.api.platformAccessory(displayName, uuid);
         
         // Get default settings from either nested or flat config structure
         const defaultSettings = this.config.defaultSettingsSection || {};
@@ -148,7 +177,7 @@ export class WLEDPlatform implements DynamicPlatformPlugin {
         
         // Store device info in the context
         accessory.context.device = {
-          name: device.name,
+          name: displayName,
           host: device.host,
           port: device.port,
           // Use default settings for auto-discovered devices
@@ -262,6 +291,20 @@ export class WLEDPlatform implements DynamicPlatformPlugin {
       // check that the device has all required fields
       if (!device.name || !device.host) {
         this.log.error('Device missing required fields (name and host):', device);
+        continue;
+      }
+
+      // Skip disabled devices
+      if (device.enabled === false) {
+        this.log.info(`Skipping disabled device: ${device.name}`);
+
+        // If this device was previously registered, unregister it
+        const existingAccessory = this.accessories.find(accessory => accessory.UUID === uuid);
+        if (existingAccessory) {
+          this.log.info(`Unregistering disabled device: ${device.name}`);
+          this.api.unregisterPlatformAccessories('homebridge-wled-ts', 'WLEDTS', [existingAccessory]);
+        }
+
         continue;
       }
 

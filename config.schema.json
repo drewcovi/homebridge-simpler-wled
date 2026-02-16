@@ -2,6 +2,7 @@
   "pluginAlias": "WLED",
   "pluginType": "platform",
   "singular": true,
+  "customUi": false,
   "headerDisplay": "Homebridge plugin for WLED - control your WLED-powered LED strips through HomeKit",
   "footerDisplay": "For more information, see the [WLED website](https://kno.wled.ge/) and [GitHub repository](https://github.com/drewcovi/homebridge-wled-ts).",
   "schema": {
@@ -12,6 +13,26 @@
         "type": "string",
         "default": "WLED",
         "required": true
+      },
+      "logLevel": {
+        "title": "Log Level",
+        "type": "string",
+        "default": "info",
+        "oneOf": [
+          { "title": "Error", "enum": ["error"] },
+          { "title": "Warning", "enum": ["warn"] },
+          { "title": "Info", "enum": ["info"] },
+          { "title": "Debug", "enum": ["debug"] }
+        ],
+        "description": "Set the logging level for the plugin. Debug mode provides detailed information for troubleshooting."
+      },
+      "defaultPollInterval": {
+        "title": "Default Poll Interval (seconds)",
+        "type": "integer",
+        "default": 10,
+        "minimum": 5,
+        "maximum": 60,
+        "description": "Default polling interval in seconds for new devices when WebSockets are not available"
       },
       "discoverySection": {
         "title": "Discovery Settings",
@@ -84,6 +105,12 @@
                   "default": 80,
                   "maximum": 65535,
                   "minimum": 1
+                },
+                "enabled": {
+                  "title": "Enabled",
+                  "type": "boolean",
+                  "default": true,
+                  "description": "Enable or disable this device without removing it from configuration"
                 },
                 "deviceSettings": {
                   "type": "object",

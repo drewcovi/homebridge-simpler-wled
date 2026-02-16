@@ -15,6 +15,7 @@ A Homebridge plugin for controlling WLED-powered LED strips through HomeKit.
 - Support for WLED segments as individual accessories
 - Integrated preset selector for easy access to saved presets
 - Individual switch controls for each WLED preset
+- **Interactive Discovery UI** - Scan your network for WLED devices and add them with one click
 - Automatic discovery and configuration of WLED devices on your network
 - Real-time updates via WebSockets for responsive control
 - Fallback to polling for backwards compatibility
@@ -34,11 +35,17 @@ If you're using [Homebridge Config UI X](https://github.com/oznu/homebridge-conf
 
 1. Navigate to the Plugins tab
 2. Find the WLED plugin and click Settings
-3. Configure your settings:
+3. **Use the Discovery UI** to find WLED devices on your network:
+   - Click "Start Discovery" to scan for devices
+   - View device details (IP, version, MAC address, LED count)
+   - Click "Add to Configuration" to automatically add devices
+4. Configure your settings:
    - Enable/disable auto-discovery
    - Set default configuration for discovered devices
    - Manually add devices with custom settings
-4. Click Save to apply your changes
+5. Click Save to apply your changes
+
+See [UI_DISCOVERY_GUIDE.md](./UI_DISCOVERY_GUIDE.md) for detailed information about the discovery interface.
 
 ### Manual Configuration
 

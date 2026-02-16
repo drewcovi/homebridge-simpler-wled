@@ -72,8 +72,14 @@ export class WLEDPresetAccessory {
   private async initializePresets(): Promise<void> {
     try {
       const presets = await this.wledDevice.getPresets();
+
+      if (Object.keys(presets).length === 0) {
+        this.platform.log.warn('No presets configured on WLED device');
+        return;
+      }
+
       this.updateInputSources(presets);
-      
+
       // Get the current preset ID
       this.currentPresetId = this.wledDevice.getActivePresetId();
     } catch (error) {

@@ -8,7 +8,6 @@ import { WLEDDevice, WLEDState } from './wledDevice';
  * Each accessory may expose multiple services of different service types.
  */
 export class WLEDAccessory {
-  private service: Service;
   private lightService: Service;
 
   // State tracking properties

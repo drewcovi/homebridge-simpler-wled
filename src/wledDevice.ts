@@ -45,9 +45,11 @@ export class WLEDDevice {
   private pollTimer?: NodeJS.Timeout;
   private webSocket?: WebSocket;
   private reconnectTimer?: NodeJS.Timeout;
+  private pingTimer?: NodeJS.Timeout;
   private reconnectAttempts = 0;
   private readonly maxReconnectAttempts = 10;
   private readonly reconnectInterval = 5000; // 5 seconds
+  private readonly pingInterval = 30000; // 30 seconds
   private state: WLEDState = {
     on: false,
     brightness: 0,
@@ -100,14 +102,21 @@ export class WLEDDevice {
     this.cleanupWebSocket();
     
     this.log.debug(`Connecting to WebSocket at ${this.wsUrl}`);
-    
+
     try {
-      this.webSocket = new WebSocket(this.wsUrl);
+      this.webSocket = new WebSocket(this.wsUrl, {
+        // Send ping frames every 30 seconds to keep connection alive
+        // and detect dead connections
+        perMessageDeflate: false, // Disable compression for better performance
+      });
       
       this.webSocket.on('open', () => {
         this.log.debug('WebSocket connection established');
         this.isConnected = true;
         this.reconnectAttempts = 0; // Reset reconnect counter on successful connection
+
+        // Start keepalive ping mechanism
+        this.startPingInterval();
       });
       
       this.webSocket.on('message', (data: WebSocket.Data) => {
@@ -117,9 +126,20 @@ export class WLEDDevice {
           this.log.error('Error handling WebSocket message:', error);
         }
       });
+
+      this.webSocket.on('pong', () => {
+        // Pong received - connection is alive
+        // Logging removed to reduce noise
+      });
       
-      this.webSocket.on('error', (error) => {
-        this.log.error('WebSocket error:', error);
+      this.webSocket.on('error', (error: any) => {
+        // Common connection errors that are handled by reconnection logic
+        const expectedErrors = ['ECONNRESET', 'ECONNREFUSED', 'ETIMEDOUT', 'EHOSTUNREACH', 'ENETUNREACH'];
+        if (expectedErrors.includes(error.code)) {
+          this.log.debug(`WebSocket connection issue (${error.code}), will attempt reconnect`);
+        } else {
+          this.log.error('WebSocket error:', error);
+        }
       });
       
       this.webSocket.on('close', () => {
@@ -139,17 +159,44 @@ export class WLEDDevice {
    * Clean up WebSocket connection
    */
   private cleanupWebSocket(): void {
+    // Stop ping timer
+    if (this.pingTimer) {
+      clearInterval(this.pingTimer);
+      this.pingTimer = undefined;
+    }
+
     if (this.webSocket) {
       // Remove all listeners
       this.webSocket.removeAllListeners();
-      
+
       // Close connection if it's open
       if (this.webSocket.readyState === WebSocket.OPEN) {
         this.webSocket.close();
       }
-      
+
       this.webSocket = undefined;
     }
+  }
+
+  /**
+   * Start sending periodic ping frames to keep connection alive
+   */
+  private startPingInterval(): void {
+    // Clear any existing ping timer
+    if (this.pingTimer) {
+      clearInterval(this.pingTimer);
+    }
+
+    this.pingTimer = setInterval(() => {
+      if (this.webSocket && this.webSocket.readyState === WebSocket.OPEN) {
+        try {
+          this.webSocket.ping();
+          // Ping logging removed to reduce noise - pings sent every 30s
+        } catch (error) {
+          this.log.debug('Error sending WebSocket ping:', error);
+        }
+      }
+    }, this.pingInterval);
   }
   
   /**
@@ -184,17 +231,23 @@ export class WLEDDevice {
   private handleWebSocketMessage(data: WebSocket.Data): void {
     // Convert data to string if it's not already
     const message = data.toString();
-    
+
     try {
+      this.log.info(`WebSocket RX: ${message}`);
+
       // Parse the JSON message
       const jsonData = JSON.parse(message);
-      
+
       // Check if this is a state update
       if (jsonData.state) {
+        this.log.debug('Processing state update from WebSocket');
         this.updateStateFromData(jsonData.state);
       } else if (jsonData.seg !== undefined) {
         // This might be a segment update only
+        this.log.debug('Processing segment update from WebSocket');
         this.updateSegmentsFromData(jsonData);
+      } else {
+        this.log.debug('Received WebSocket message with no recognized state/segment data');
       }
     } catch (error) {
       this.log.error('Error parsing WebSocket message:', error);
@@ -505,15 +558,18 @@ export class WLEDDevice {
   private sendWebSocketUpdate(payload: any): void {
     if (this.webSocket && this.webSocket.readyState === WebSocket.OPEN) {
       try {
-        this.webSocket.send(JSON.stringify(payload));
+        const message = JSON.stringify(payload);
+        this.log.info(`WebSocket TX: ${message}`);
+        this.webSocket.send(message);
         return; // Success - no need to continue
       } catch (error) {
         this.log.debug('Error sending WebSocket message, falling back to HTTP:', error);
         // Fall through to HTTP method
       }
     }
-    
+
     // If WebSocket not available or send failed, fall back to HTTP
+    this.log.debug('WebSocket not available, using HTTP fallback for:', JSON.stringify(payload));
     axios.post(`${this.baseUrl}/state`, payload).catch(error => {
       this.log.error('Failed to send state update via HTTP:', error);
     });
@@ -857,43 +913,54 @@ export class WLEDDevice {
       if (Object.keys(this.presets).length > 0) {
         return this.presets;
       }
-      
-      const response = await axios.get(`${this.baseUrl}/presets`);
+
+      const response = await axios.get(`${this.baseUrl}/presets.json`);
       const rawPresets = response.data || {};
-      
+
       // Process presets to have a more useful format
       // Remove metadata entries
       delete rawPresets._name;
       delete rawPresets._type;
-      
+
       // Format presets into a more useful structure
       this.presets = {};
-      
+
       for (const [id, data] of Object.entries(rawPresets)) {
         if (typeof data === 'object' && data !== null) {
           // Extract a name for the preset
           let name = `Preset ${id}`;
-          
+
           if ('n' in data && typeof data.n === 'string') {
             name = data.n;
           } else if ('name' in data && typeof data.name === 'string') {
             name = data.name;
           }
-          
+
           this.presets[id] = {
             name,
             data,
           };
         }
       }
-      
+
       // Notify preset listeners
       this.notifyPresetListeners();
-      
+
       return this.presets;
-    } catch (error) {
-      this.log.error('Failed to get presets:', error);
-      throw error;
+    } catch (error: any) {
+      // Handle different error cases appropriately
+      if (error.response?.status === 501) {
+        // 501 Not Implemented - device doesn't support presets endpoint
+        this.log.debug('Presets endpoint not supported by this WLED device');
+      } else if (error.response?.status === 404) {
+        // 404 Not Found - no presets configured
+        this.log.debug('No presets configured on WLED device');
+      } else {
+        // Other errors - log as warning
+        this.log.warn('Failed to get presets:', error.message || error);
+      }
+      // Return empty presets - preset functionality is optional
+      return {};
     }
   }
 
