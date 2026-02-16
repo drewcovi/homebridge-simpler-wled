@@ -1,5 +1,5 @@
 {
-  "pluginAlias": "WLED",
+  "pluginAlias": "Simpler WLED",
   "pluginType": "platform",
   "singular": true,
   "customUi": true,
