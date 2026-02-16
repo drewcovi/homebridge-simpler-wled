@@ -2,7 +2,8 @@
   "pluginAlias": "WLED",
   "pluginType": "platform",
   "singular": true,
-  "customUi": false,
+  "customUi": true,
+  "customUiPath": "./dist/homebridge-ui",
   "headerDisplay": "Homebridge plugin for WLED - control your WLED-powered LED strips through HomeKit",
   "footerDisplay": "For more information, see the [WLED website](https://kno.wled.ge/) and [GitHub repository](https://github.com/drewcovi/homebridge-wled-ts).",
   "schema": {
@@ -39,10 +40,10 @@
         "type": "object",
         "properties": {
           "autoDiscover": {
-            "title": "Automatically Discover WLED Devices",
-            "description": "Automatically discover and add WLED devices found on your network",
+            "title": "Automatically Discover WLED Devices (Deprecated)",
+            "description": "This setting is no longer used. Device discovery is now only triggered manually through the Custom Plugin UI to reduce network scanning.",
             "type": "boolean",
-            "default": true
+            "default": false
           }
         }
       },

@@ -41,19 +41,12 @@ export class WLEDPlatform implements DynamicPlatformPlugin {
     this.api.on('didFinishLaunching', () => {
       log.debug('Executed didFinishLaunching callback');
       
-      // Register for discovery events
+      // Register for discovery events (needed for UI-triggered discovery)
       this.discoveryService.addDiscoveryListener(this.handleDiscoveredDevices.bind(this));
-      
-      // Start automatic discovery if enabled
-      // Check if we have the new nested structure or old flat structure
-      const autoDiscover = this.config.discoverySection?.autoDiscover !== undefined 
-        ? this.config.discoverySection.autoDiscover 
-        : this.config.autoDiscover !== false;
-        
-      if (autoDiscover) {
-        this.discoveryService.startDiscovery();
-      }
-      
+
+      // Note: Automatic discovery is disabled. Discovery is only triggered via the Custom UI.
+      // This prevents unnecessary network scanning on every Homebridge restart.
+
       // Process manually configured devices
       this.discoverDevices();
     });
