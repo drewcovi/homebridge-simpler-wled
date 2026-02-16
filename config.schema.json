@@ -9,6 +9,12 @@
   "schema": {
     "type": "object",
     "properties": {
+      "name": {
+        "title": "Name",
+        "type": "string",
+        "default": "Simpler WLED",
+        "required": true
+      },
       "logLevel": {
         "title": "Log Level",
         "type": "string",
