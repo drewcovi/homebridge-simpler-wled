@@ -299,6 +299,107 @@
     .tab-content.active {
       display: block;
     }
+
+    .preset-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 15px;
+      margin-top: 20px;
+    }
+
+    .preset-item {
+      background: #fff;
+      border: 1px solid #dee2e6;
+      border-radius: 8px;
+      padding: 15px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      transition: all 0.2s;
+    }
+
+    .preset-item:hover {
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .preset-checkbox {
+      width: 20px;
+      height: 20px;
+      cursor: pointer;
+      accent-color: #007bff;
+    }
+
+    .preset-info {
+      flex: 1;
+    }
+
+    .preset-name {
+      font-weight: 600;
+      color: #212529;
+      margin-bottom: 4px;
+    }
+
+    .preset-id {
+      font-size: 0.85em;
+      color: #6c757d;
+    }
+
+    .preset-quick-label {
+      display: inline-block;
+      background: #e7f3ff;
+      color: #0056b3;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 0.75em;
+      font-weight: 600;
+      margin-left: 8px;
+    }
+
+    .device-preset-tab {
+      padding: 8px 16px;
+      cursor: pointer;
+      border: none;
+      background: none;
+      font-size: 0.95em;
+      color: #6c757d;
+      border-bottom: 2px solid transparent;
+      transition: all 0.3s;
+    }
+
+    .device-preset-tab:hover {
+      color: #007bff;
+      background: #f8f9fa;
+    }
+
+    .device-preset-tab.active {
+      color: #007bff;
+      border-bottom-color: #007bff;
+      font-weight: 600;
+    }
+
+    .preset-content {
+      display: none;
+    }
+
+    .preset-content.active {
+      display: block;
+    }
+
+    .preset-actions {
+      margin-bottom: 20px;
+      padding: 15px;
+      background: #f8f9fa;
+      border-radius: 8px;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .loading-message {
+      text-align: center;
+      padding: 40px;
+      color: #6c757d;
+    }
   </style>
 </head>
 <body>
@@ -309,6 +410,7 @@
     <div class="tabs">
       <button class="tab active" onclick="switchTab('devices')">Configured Devices</button>
       <button class="tab" onclick="switchTab('discovery')">Device Discovery</button>
+      <button class="tab" onclick="switchTab('presets')">Manage Presets</button>
       <button class="tab" onclick="switchTab('settings')">Plugin Settings</button>
     </div>
 
@@ -337,6 +439,21 @@
 
       <div id="discoveredDeviceList" class="device-list">
         <!-- Devices will be populated here -->
+      </div>
+    </div>
+
+    <!-- Presets Tab -->
+    <div id="presetsTab" class="tab-content">
+      <div class="alert alert-info">
+        Manage presets for each WLED device. Enable or disable presets to control which ones appear in HomeKit.
+      </div>
+
+      <div id="deviceTabs" class="tabs" style="border-bottom: 1px solid #dee2e6; margin-bottom: 15px;">
+        <!-- Device tabs will be populated here -->
+      </div>
+
+      <div id="presetContent">
+        <!-- Preset lists will be populated here -->
       </div>
     </div>
 
@@ -388,6 +505,8 @@
         loadConfiguredDevices();
       } else if (tabName === 'settings') {
         loadSettings();
+      } else if (tabName === 'presets') {
+        loadPresetsTab();
       }
     }
 
@@ -981,6 +1100,251 @@
       } catch (error) {
         console.error('Error adding device to config:', error);
         await window.homebridge.toast.error(`Failed to add device: ${error.message}`, 'Error');
+      }
+    }
+
+    // Presets management
+    let devicePresetsCache = {};
+    let currentPresetDevice = null;
+
+    // Load presets tab with device tabs
+    async function loadPresetsTab() {
+      console.log('[UI] Loading presets tab...');
+      const deviceTabsContainer = document.getElementById('deviceTabs');
+      const presetContentContainer = document.getElementById('presetContent');
+
+      try {
+        const config = await window.homebridge.getPluginConfig();
+        let devices = [];
+
+        if (config && config[0]) {
+          if (config[0].manualDevicesSection && config[0].manualDevicesSection.devices) {
+            devices = config[0].manualDevicesSection.devices;
+          } else if (config[0].devices) {
+            devices = config[0].devices;
+          }
+        }
+
+        // Filter out disabled devices
+        devices = devices.filter(d => d && d.enabled !== false);
+
+        if (devices.length === 0) {
+          deviceTabsContainer.innerHTML = '';
+          presetContentContainer.innerHTML = `
+            <div class="loading-message">
+              <p>No enabled devices configured.</p>
+              <p>Add devices in the "Configured Devices" or "Device Discovery" tab first.</p>
+            </div>
+          `;
+          return;
+        }
+
+        // Create tabs for each device
+        deviceTabsContainer.innerHTML = devices.map((device, index) => `
+          <button class="device-preset-tab ${index === 0 ? 'active' : ''}"
+                  onclick="switchDevicePresetTab(${index}, '${device.host}', ${device.port}, '${device.name.replace(/'/g, "\\'")}')">
+            ${device.name}
+          </button>
+        `).join('');
+
+        // Load presets for the first device
+        if (devices.length > 0) {
+          await switchDevicePresetTab(0, devices[0].host, devices[0].port, devices[0].name);
+        }
+      } catch (error) {
+        console.error('[UI] Error loading presets tab:', error);
+        presetContentContainer.innerHTML = `
+          <div class="alert alert-warning">
+            Failed to load devices: ${error.message}
+          </div>
+        `;
+      }
+    }
+
+    // Switch between device preset tabs
+    async function switchDevicePresetTab(index, host, port, deviceName) {
+      console.log(`[UI] Switching to device preset tab: ${deviceName}`);
+
+      // Update tab styling
+      document.querySelectorAll('.device-preset-tab').forEach((tab, i) => {
+        if (i === index) {
+          tab.classList.add('active');
+        } else {
+          tab.classList.remove('active');
+        }
+      });
+
+      currentPresetDevice = { index, host, port, name: deviceName };
+
+      // Load presets for this device
+      await loadDevicePresets(host, port, deviceName);
+    }
+
+    // Load presets for a specific device
+    async function loadDevicePresets(host, port, deviceName) {
+      const presetContentContainer = document.getElementById('presetContent');
+
+      // Show loading state
+      presetContentContainer.innerHTML = `
+        <div class="loading-message">
+          <p>Loading presets for ${deviceName}...</p>
+        </div>
+      `;
+
+      try {
+        console.log(`[UI] Fetching presets for ${host}:${port}`);
+
+        // Fetch presets from the device
+        const response = await window.homebridge.request('/get-presets', { host, port });
+
+        if (response.status === 'error') {
+          throw new Error(response.message);
+        }
+
+        const presets = response.presets || {};
+        devicePresetsCache[host] = presets;
+
+        console.log(`[UI] Loaded ${Object.keys(presets).length} presets for ${deviceName}`);
+
+        // Get enabled presets from config
+        const config = await window.homebridge.getPluginConfig();
+        let devices = getDevicesArray(config);
+        const device = devices?.find(d => d.host === host);
+        const enabledPresets = device?.deviceSettings?.enabledPresets || [];
+
+        if (Object.keys(presets).length === 0) {
+          presetContentContainer.innerHTML = `
+            <div class="loading-message">
+              <p>No presets found on ${deviceName}.</p>
+              <p>Configure presets on your WLED device first.</p>
+            </div>
+          `;
+          return;
+        }
+
+        // Render preset list with checkboxes
+        presetContentContainer.innerHTML = `
+          <div class="preset-actions">
+            <button class="btn btn-primary" onclick="savePresetSelection()">
+              Save Preset Selection
+            </button>
+            <button class="btn" style="background: #6c757d; color: white;" onclick="selectAllPresets()">
+              Select All
+            </button>
+            <button class="btn" style="background: #6c757d; color: white;" onclick="deselectAllPresets()">
+              Deselect All
+            </button>
+            <span style="color: #6c757d; font-size: 0.9em; margin-left: auto;">
+              ${enabledPresets.length} of ${Object.keys(presets).length} presets enabled
+            </span>
+          </div>
+          <div class="preset-list">
+            ${Object.entries(presets).map(([id, preset]) => {
+              const isEnabled = enabledPresets.includes(id);
+              return `
+                <div class="preset-item">
+                  <input
+                    type="checkbox"
+                    class="preset-checkbox"
+                    id="preset-${id}"
+                    data-preset-id="${id}"
+                    ${isEnabled ? 'checked' : ''}
+                    onchange="updatePresetCount()"
+                  >
+                  <label for="preset-${id}" class="preset-info" style="cursor: pointer;">
+                    <div class="preset-name">
+                      ${preset.name}
+                      ${preset.quickLabel ? `<span class="preset-quick-label">${preset.quickLabel}</span>` : ''}
+                    </div>
+                    <div class="preset-id">Preset ID: ${id}</div>
+                  </label>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        `;
+      } catch (error) {
+        console.error('[UI] Error loading device presets:', error);
+        presetContentContainer.innerHTML = `
+          <div class="alert alert-warning">
+            Failed to load presets for ${deviceName}: ${error.message}
+          </div>
+        `;
+      }
+    }
+
+    // Update preset count display
+    function updatePresetCount() {
+      const checkboxes = document.querySelectorAll('.preset-checkbox');
+      const enabledCount = Array.from(checkboxes).filter(cb => cb.checked).length;
+      const totalCount = checkboxes.length;
+
+      const countDisplay = document.querySelector('.preset-actions span');
+      if (countDisplay) {
+        countDisplay.textContent = `${enabledCount} of ${totalCount} presets enabled`;
+      }
+    }
+
+    // Select all presets
+    function selectAllPresets() {
+      document.querySelectorAll('.preset-checkbox').forEach(cb => {
+        cb.checked = true;
+      });
+      updatePresetCount();
+    }
+
+    // Deselect all presets
+    function deselectAllPresets() {
+      document.querySelectorAll('.preset-checkbox').forEach(cb => {
+        cb.checked = false;
+      });
+      updatePresetCount();
+    }
+
+    // Save preset selection to config
+    async function savePresetSelection() {
+      if (!currentPresetDevice) {
+        await window.homebridge.toast.error('No device selected', 'Error');
+        return;
+      }
+
+      try {
+        const config = await window.homebridge.getPluginConfig();
+        const devices = getDevicesArray(config);
+
+        if (!devices) {
+          throw new Error('Devices array not found in config');
+        }
+
+        // Find the device by host
+        const deviceIndex = devices.findIndex(d => d.host === currentPresetDevice.host);
+
+        if (deviceIndex === -1) {
+          throw new Error('Device not found in config');
+        }
+
+        // Ensure deviceSettings exists
+        if (!devices[deviceIndex].deviceSettings) {
+          devices[deviceIndex].deviceSettings = {};
+        }
+
+        // Get all checked preset IDs
+        const enabledPresets = Array.from(document.querySelectorAll('.preset-checkbox:checked'))
+          .map(cb => cb.getAttribute('data-preset-id'));
+
+        // Update the enabled presets
+        devices[deviceIndex].deviceSettings.enabledPresets = enabledPresets;
+
+        // Save config
+        await window.homebridge.updatePluginConfig(config);
+        await window.homebridge.toast.success(
+          `Saved ${enabledPresets.length} enabled presets for ${currentPresetDevice.name}. Restart Homebridge for changes to take effect.`,
+          'Presets Updated'
+        );
+
+      } catch (error) {
+        console.error('[UI] Error saving preset selection:', error);
+        await window.homebridge.toast.error(`Failed to save preset selection: ${error.message}`, 'Error');
       }
     }
 

@@ -215,7 +215,10 @@ export class WLEDPlatform implements DynamicPlatformPlugin {
 
       // Handle nested device settings if present
       const deviceSettings = device.deviceSettings || device;
-      
+
+      // Generate a display name from the hostname for better legibility
+      const displayName = this.getDisplayNameFromHost(device.host, device.name);
+
       // create the WLED device instance
       const wledDevice = new WLEDDevice(
         this.log,
@@ -235,20 +238,64 @@ export class WLEDPlatform implements DynamicPlatformPlugin {
         // the accessory already exists
         this.log.info('Restoring existing accessory from cache:', existingAccessory.displayName);
 
-        // create the accessory handler for the restored accessory
-        new WLEDAccessory(this, existingAccessory, wledDevice);
+        // Update display name to match hostname formatting
+        if (existingAccessory.displayName !== displayName) {
+          this.log.info(`Updating display name from "${existingAccessory.displayName}" to "${displayName}"`);
+          existingAccessory.displayName = displayName;
+        }
 
-        // update accessory cache with any changes to the accessory details and information
-        this.api.updatePlatformAccessories([existingAccessory]);
+        // Check if enabledPresets have changed
+        const oldEnabledPresets = existingAccessory.context.device?.deviceSettings?.enabledPresets || [];
+        const newEnabledPresets = device.deviceSettings?.enabledPresets || [];
+
+        // Compare arrays (order doesn't matter)
+        const presetsChanged = JSON.stringify([...oldEnabledPresets].sort()) !== JSON.stringify([...newEnabledPresets].sort());
+
+        if (presetsChanged) {
+          this.log.info(`Enabled presets changed for ${displayName}. Re-registering accessory to force Home app refresh...`);
+          this.log.debug(`Old presets: ${JSON.stringify(oldEnabledPresets)}`);
+          this.log.debug(`New presets: ${JSON.stringify(newEnabledPresets)}`);
+
+          // Unregister the old accessory
+          this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [existingAccessory]);
+
+          // Create a new accessory with updated presets
+          const newAccessory = new this.api.platformAccessory(displayName, uuid, this.api.hap.Categories.TELEVISION);
+          newAccessory.context.device = { ...device, name: displayName };
+
+          // Create the accessory handler
+          new WLEDAccessory(this, newAccessory, wledDevice);
+
+          // Register the new accessory
+          this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [newAccessory]);
+
+          // Update our accessories cache
+          const index = this.accessories.findIndex(acc => acc.UUID === uuid);
+          if (index !== -1) {
+            this.accessories[index] = newAccessory;
+          } else {
+            this.accessories.push(newAccessory);
+          }
+        } else {
+          // No preset changes, just update context and restore normally
+          existingAccessory.context.device = { ...device, name: displayName };
+
+          // create the accessory handler for the restored accessory
+          new WLEDAccessory(this, existingAccessory, wledDevice);
+
+          // update accessory cache with any changes to the accessory details and information
+          this.api.updatePlatformAccessories([existingAccessory]);
+        }
       } else {
         // the accessory does not yet exist, so we need to create it
-        this.log.info('Adding new accessory:', device.name);
+        this.log.info('Adding new accessory:', displayName);
 
         // create a new accessory
-        const accessory = new this.api.platformAccessory(device.name, uuid, this.api.hap.Categories.TELEVISION);
+        const accessory = new this.api.platformAccessory(displayName, uuid, this.api.hap.Categories.TELEVISION);
 
         // store a copy of the device object in the `accessory.context`
-        accessory.context.device = device;
+        // Update the name to match the formatted display name
+        accessory.context.device = { ...device, name: displayName };
 
         // create the accessory handler for the newly create accessory
         new WLEDAccessory(this, accessory, wledDevice);

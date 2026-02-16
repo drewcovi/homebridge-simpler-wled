@@ -141,6 +141,15 @@
                       "type": "integer",
                       "default": 10,
                       "minimum": 1
+                    },
+                    "enabledPresets": {
+                      "title": "Enabled Presets",
+                      "description": "List of preset IDs that are enabled for this device. Configure this in the Custom Plugin UI.",
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "default": []
                     }
                   }
                 }

@@ -35,6 +35,7 @@ class PluginUiServer extends HomebridgePluginUiServer {
     this.onRequest('/devices', this.handleGetDevices.bind(this));
     this.onRequest('/stop-discovery', this.handleStopDiscovery.bind(this));
     this.onRequest('/cached-accessories', this.handleGetCachedAccessories.bind(this));
+    this.onRequest('/get-presets', this.handleGetPresets.bind(this));
 
     // Start the UI server immediately - don't wait for discovery service
     process.nextTick(() => {
@@ -204,6 +205,76 @@ class PluginUiServer extends HomebridgePluginUiServer {
       return {
         accessories: [],
         error: error.message,
+      };
+    }
+  }
+
+  /**
+   * Handle a request to get presets from a WLED device
+   */
+  async handleGetPresets(payload: { host: string; port: number }) {
+    try {
+      const axios = require('axios');
+      const { host, port } = payload;
+
+      if (!host) {
+        return {
+          status: 'error',
+          message: 'Host is required',
+          presets: {},
+        };
+      }
+
+      const presetPort = port || 80;
+      const url = `http://${host}:${presetPort}/presets.json`;
+
+      console.log(`[UI Server] Fetching presets from ${url}`);
+
+      const response = await axios.get(url, { timeout: 10000 });
+      const rawPresets = response.data || {};
+
+      // Remove metadata entries
+      delete rawPresets._name;
+      delete rawPresets._type;
+
+      // Format presets into a more useful structure
+      const presets: Record<string, { id: string; name: string; quickLabel?: string }> = {};
+
+      for (const [id, data] of Object.entries(rawPresets)) {
+        if (typeof data === 'object' && data !== null) {
+          // Extract name (n) and quick label (ql) for the preset
+          const n = ('n' in data && typeof data.n === 'string') ? data.n : `Preset ${id}`;
+          const ql = ('ql' in data && typeof data.ql === 'string') ? data.ql : '';
+
+          presets[id] = {
+            id,
+            name: n,
+            quickLabel: ql || undefined,
+          };
+        }
+      }
+
+      console.log(`[UI Server] Found ${Object.keys(presets).length} presets for ${host}`);
+
+      return {
+        status: 'success',
+        presets,
+      };
+    } catch (error: any) {
+      console.error('[UI Server] Error fetching presets:', error);
+
+      if (error.response?.status === 404 || error.response?.status === 501) {
+        return {
+          status: 'success',
+          presets: {},
+          message: 'No presets configured on this device',
+        };
+      }
+
+      return {
+        status: 'error',
+        message: error.message || 'Failed to fetch presets',
+        presets: {},
       };
     }
   }

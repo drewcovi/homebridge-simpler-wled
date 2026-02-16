@@ -52,7 +52,7 @@ export class WLEDAccessory {
       this.accessory.addService(this.platform.Service.Television);
 
     this.presetsService
-      .setCharacteristic(this.platform.Characteristic.ConfiguredName, accessory.context.device.name)
+      .setCharacteristic(this.platform.Characteristic.ConfiguredName, accessory.context.device.name + ' Presets')
       .setCharacteristic(this.platform.Characteristic.SleepDiscoveryMode,
         this.platform.Characteristic.SleepDiscoveryMode.ALWAYS_DISCOVERABLE);
 
@@ -70,7 +70,9 @@ export class WLEDAccessory {
       this.accessory.addService(this.platform.Service.Lightbulb);
 
     // Set service name
-    this.lightService.setCharacteristic(this.platform.Characteristic.Name, accessory.context.device.name + ' Light');
+    this.lightService
+      .setCharacteristic(this.platform.Characteristic.Name, accessory.context.device.name + ' Light')
+      .setCharacteristic(this.platform.Characteristic.ConfiguredName, accessory.context.device.name + ' Brightness')
 
     // Register handlers for lightbulb characteristics
     this.lightService.getCharacteristic(this.platform.Characteristic.On)
@@ -143,6 +145,33 @@ export class WLEDAccessory {
     }
     this.inputServices = [];
 
+    // Get enabled presets from device settings
+    // First check cached context, then look up in platform config
+    let enabledPresets: string[] = [];
+
+    // Try to get from context (manually configured devices)
+    if (this.accessory.context.device?.deviceSettings?.enabledPresets) {
+      enabledPresets = this.accessory.context.device.deviceSettings.enabledPresets;
+      this.platform.log.info(`[DEBUG] Loaded enabledPresets from context: ${JSON.stringify(enabledPresets)}`);
+    } else {
+      // Look up in platform config for discovered devices
+      const devices = this.platform.config.manualDevicesSection?.devices || this.platform.config.devices || [];
+      const deviceHost = this.accessory.context.device?.host;
+      this.platform.log.info(`[DEBUG] Looking up device by host: ${deviceHost} in ${devices.length} devices`);
+      const configuredDevice = devices.find((d: any) => d.host === deviceHost);
+      if (configuredDevice?.deviceSettings?.enabledPresets) {
+        enabledPresets = configuredDevice.deviceSettings.enabledPresets;
+        this.platform.log.info(`[DEBUG] Loaded enabledPresets from platform config: ${JSON.stringify(enabledPresets)}`);
+      } else {
+        this.platform.log.info(`[DEBUG] No enabledPresets found in platform config for ${deviceHost}`);
+      }
+    }
+
+    const filterByEnabled = enabledPresets.length > 0;
+
+    this.platform.log.info(`[DEBUG] Enabled presets for ${this.accessory.displayName}: ${JSON.stringify(enabledPresets)}`);
+    this.platform.log.info(`[DEBUG] Filter by enabled: ${filterByEnabled}`);
+
     // Create input source for each preset
     for (const [presetIdStr, preset] of Object.entries(presets)) {
       this.platform.log.info(`[DEBUG] Processing preset - presetIdStr: "${presetIdStr}"`);
@@ -153,6 +182,12 @@ export class WLEDAccessory {
       if (isNaN(presetId)) {
         this.platform.log.warn(`[DEBUG] Skipping preset with non-numeric ID: "${presetIdStr}"`);
         continue; // Skip non-numeric preset IDs
+      }
+
+      // Filter by enabled presets if configured
+      if (filterByEnabled && !enabledPresets.includes(presetIdStr)) {
+        this.platform.log.debug(`Skipping preset ${presetId} - not in enabled presets list`);
+        continue;
       }
 
       // this.platform.log.info(`[DEBUG] Preset object: ${JSON.stringify(preset)}`);
@@ -210,6 +245,9 @@ export class WLEDAccessory {
 
     const createdPresets = Array.from(this.presetInputMap.keys()).join(', ');
     this.platform.log.debug(`Created ${this.inputServices.length} preset inputs for ${this.accessory.displayName}: [${createdPresets}]`);
+
+    // Force HomeKit to refresh the accessory by updating the platform accessories cache
+    this.platform.api.updatePlatformAccessories([this.accessory]);
   }
 
   /**
