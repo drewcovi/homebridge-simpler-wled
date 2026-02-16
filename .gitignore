@@ -24,3 +24,6 @@ Thumbs.db
 
 # Coverage directory
 coverage/
+# Test coverage
+coverage/
+*.lcov

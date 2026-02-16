@@ -1327,10 +1327,10 @@
 
         // Save config
         await window.homebridge.updatePluginConfig(config);
-        await window.homebridge.toast.success(
-          `Preset selection saved. Restart Homebridge for changes to take effect.`,
-          'Auto-saved'
-        );
+        // await window.homebridge.toast.success(
+        //   `Preset selection saved. Restart Homebridge for changes to take effect.`,
+        //   'Auto-saved'
+        // );
 
       } catch (error) {
         console.error('[UI] Error saving preset selection:', error);

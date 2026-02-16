@@ -425,7 +425,7 @@ export class WLEDDevice {
     const delta = max - min;
     
     let h = 0;
-    let s = max === 0 ? 0 : delta / max;
+    const s = max === 0 ? 0 : delta / max;
     const v = max;
 
     if (delta === 0) {

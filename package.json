@@ -4,12 +4,19 @@
   "description": "Homebridge plugin for WLED LED controllers",
   "main": "dist/index.js",
   "scripts": {
-    "build": "tsc && npm run build:ui",
+    "clean": "rm -rf dist coverage",
+    "lint": "eslint src/**.ts",
+    "test": "jest --forceExit",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage --forceExit",
+    "test:verbose": "jest --verbose --forceExit",
+    "test:ci": "jest --ci --coverage --maxWorkers=2 --forceExit",
+    "test:unit": "jest tests/wledDevice.test.ts tests/discoveryService.test.ts tests/platform.test.ts tests/settings.test.ts --forceExit",
+    "prebuild": "npm run lint && npm run test:unit",
+    "build": "npm run clean && tsc && npm run build:ui",
     "build:ui": "tsc -p homebridge-ui/tsconfig.json && cp -r homebridge-ui/public dist/homebridge-ui/",
     "prepublishOnly": "npm run build",
-    "watch": "npm run build -- --watch",
-    "lint": "eslint src/**.ts",
-    "test": "echo \"No tests specified\""
+    "watch": "npm run build -- --watch"
   },
   "engines": {
     "node": ">=14.0.0",
@@ -46,13 +53,20 @@
     "ws": "^8.16.0"
   },
   "devDependencies": {
+    "@types/chai": "^5.2.3",
     "@types/dnssd": "^0.4.5",
-    "@types/node": "^18.0.0",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^18.19.130",
     "@types/ws": "^8.5.10",
     "@typescript-eslint/eslint-plugin": "^6.0.0",
     "@typescript-eslint/parser": "^6.0.0",
+    "axios-mock-adapter": "^2.1.0",
+    "chai": "^6.2.2",
     "eslint": "^8.0.0",
     "homebridge": "^1.6.0",
-    "typescript": "^5.0.0"
+    "jest": "^30.2.0",
+    "ts-jest": "^29.4.6",
+    "typescript": "^5.0.0",
+    "ws-mock": "^0.1.0"
   }
 }

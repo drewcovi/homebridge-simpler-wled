@@ -55,7 +55,7 @@ export class WLEDPlatform implements DynamicPlatformPlugin {
    */
   private getDisplayNameFromHost(host: string, fallbackName: string): string {
     // Remove .local suffix
-    let name = host.replace(/\.local$/i, '');
+    const name = host.replace(/\.local$/i, '');
 
     // If it's an IP address, use the fallback name
     if (/^\d+\.\d+\.\d+\.\d+$/.test(name)) {

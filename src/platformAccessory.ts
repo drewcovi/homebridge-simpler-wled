@@ -72,7 +72,7 @@ export class WLEDAccessory {
     // Set service name
     this.lightService
       .setCharacteristic(this.platform.Characteristic.Name, accessory.context.device.name + ' Light')
-      .setCharacteristic(this.platform.Characteristic.ConfiguredName, accessory.context.device.name + ' Brightness')
+      .setCharacteristic(this.platform.Characteristic.ConfiguredName, accessory.context.device.name + ' Brightness');
 
     // Register handlers for lightbulb characteristics
     this.lightService.getCharacteristic(this.platform.Characteristic.On)
@@ -367,7 +367,7 @@ export class WLEDAccessory {
     await this.wledDevice.setPower(isActive);
   }
 
-  async setRemoteKey(value: CharacteristicValue): Promise<void> {
+  async setRemoteKey(_value: CharacteristicValue): Promise<void> {
     // We don't need to handle remote key presses for this use case
     // But we need to provide a handler to avoid errors
   }
