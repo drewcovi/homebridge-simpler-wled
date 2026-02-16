@@ -1,0 +1,43 @@
+# Source files (compiled versions are in dist/)
+src/
+homebridge-ui/server.ts
+homebridge-ui/tsconfig.json
+
+# Tests
+tests/
+*.test.ts
+test-*.js
+coverage/
+
+# Build configuration
+tsconfig.json
+jest.config.js
+.eslintrc.js
+
+# Development files
+.github/
+.vscode/
+.DS_Store
+*.log
+npm-debug.log*
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Documentation (keep main README)
+BUILD.md
+DISCOVERY_GUIDE.md
+UI_DISCOVERY_GUIDE.md
+
+# Config examples (keep schema)
+config-example.json
+
+# Claude files
+.claude/
+
+# Editor files
+*.swp
+*.swo
+*~

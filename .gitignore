@@ -27,3 +27,6 @@ coverage/
 # Test coverage
 coverage/
 *.lcov
+
+# Claude Code
+.claude/

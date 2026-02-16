@@ -47,6 +47,18 @@ describe('WLEDPlatform', () => {
 
       expect(platform.accessories).toEqual([]);
     });
+
+    it('should handle empty configuration gracefully', () => {
+      const config = createMockPlatformConfig({ devices: [] });
+      platform = new WLEDPlatform(mockLogger, config, mockApi as any);
+
+      mockApi.emit('didFinishLaunching');
+
+      expect(mockLogger.warn).toHaveBeenCalledWith(
+        expect.stringContaining('No WLED devices configured')
+      );
+      expect(platform.wledDevices.size).toBe(0);
+    });
   });
 
   describe('Device Discovery', () => {

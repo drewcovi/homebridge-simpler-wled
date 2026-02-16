@@ -188,6 +188,12 @@ export class WLEDPlatform implements DynamicPlatformPlugin {
     // Get devices list from either nested or flat config structure
     const devices = this.config.manualDevicesSection?.devices || this.config.devices || [];
 
+    // Warn if no devices are configured
+    if (devices.length === 0) {
+      this.log.warn('No WLED devices configured. Use the Custom Plugin UI to discover devices or manually add them to your config.');
+      // Don't return early - we still need to clean up any old accessories
+    }
+
     // loop over the configured devices and register each one if it has not already been registered
     for (const device of devices) {
       // generate a unique id for the accessory based on the provided device info
@@ -207,7 +213,7 @@ export class WLEDPlatform implements DynamicPlatformPlugin {
         const existingAccessory = this.accessories.find(accessory => accessory.UUID === uuid);
         if (existingAccessory) {
           this.log.info(`Unregistering disabled device: ${device.name}`);
-          this.api.unregisterPlatformAccessories('homebridge-simpler-wled', 'SWLED', [existingAccessory]);
+          this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [existingAccessory]);
         }
 
         continue;
