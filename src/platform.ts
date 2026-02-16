@@ -1,8 +1,6 @@
 import { API, DynamicPlatformPlugin, Logger, PlatformAccessory, PlatformConfig, Service, Characteristic } from 'homebridge';
 import { PLATFORM_NAME, PLUGIN_NAME } from './settings';
 import { WLEDAccessory } from './platformAccessory';
-import { WLEDSegmentAccessory } from './segmentAccessory';
-import { WLEDPresetAccessory } from './presetAccessory';
 import { WLEDDevice } from './wledDevice';
 import { WLEDDiscoveryService, DiscoveredWLEDDevice } from './discoveryService';
 
@@ -152,49 +150,19 @@ export class WLEDPlatform implements DynamicPlatformPlugin {
         this.log.info('Adding new accessory:', displayName);
 
         const accessory = new this.api.platformAccessory(displayName, uuid);
-        
-        // Get default settings from either nested or flat config structure
-        const defaultSettings = this.config.defaultSettingsSection || {};
-        const defaultUseSegments = defaultSettings.defaultUseSegments !== undefined
-          ? defaultSettings.defaultUseSegments
-          : this.config.defaultUseSegments || false;
-        const defaultUsePresetService = defaultSettings.defaultUsePresetService !== undefined
-          ? defaultSettings.defaultUsePresetService
-          : this.config.defaultUsePresetService !== false;
-        const defaultUseWebSockets = defaultSettings.defaultUseWebSockets !== undefined
-          ? defaultSettings.defaultUseWebSockets
-          : this.config.defaultUseWebSockets !== false;
-        const defaultPollInterval = defaultSettings.defaultPollInterval !== undefined
-          ? defaultSettings.defaultPollInterval
-          : this.config.defaultPollInterval || 10;
-        
+
         // Store device info in the context
         accessory.context.device = {
           name: displayName,
           host: device.host,
           port: device.port,
-          // Use default settings for auto-discovered devices
-          useSegments: defaultUseSegments,
-          usePresetService: defaultUsePresetService,
-          useWebSockets: defaultUseWebSockets,
-          pollInterval: defaultPollInterval,
         };
-        
+
         // Create the accessory handler
         new WLEDAccessory(this, accessory, wledDevice);
-        
+
         // Register the accessory
         this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
-        
-        // Create segment accessories if enabled by default
-        if (defaultUseSegments) {
-          this.createSegmentAccessories(accessory.context.device, wledDevice);
-        }
-        
-        // Create preset accessory if enabled by default
-        if (defaultUsePresetService) {
-          this.createPresetAccessory(accessory.context.device, wledDevice);
-        }
       }
     }
   }
@@ -210,62 +178,6 @@ export class WLEDPlatform implements DynamicPlatformPlugin {
     this.accessories.push(accessory);
   }
 
-  /**
-   * Helper function to create segment accessories for a device
-   */
-  private createSegmentAccessories(device: any, wledDevice: WLEDDevice): void {
-    wledDevice.getSegments().then(segments => {
-      this.log.debug(`Found ${segments.length} segments for device: ${device.name}`);
-      
-      for (let i = 0; i < segments.length; i++) {
-        const segment = segments[i];
-        const segmentUuid = this.api.hap.uuid.generate(`${device.host}-segment-${i}`);
-        const segmentName = segment.name || `${device.name} Segment ${i}`;
-        
-        const existingSegmentAccessory = this.accessories.find(accessory => accessory.UUID === segmentUuid);
-
-        if (existingSegmentAccessory) {
-          this.log.info('Restoring existing segment accessory from cache:', existingSegmentAccessory.displayName);
-          new WLEDSegmentAccessory(this, existingSegmentAccessory, wledDevice, i);
-          this.api.updatePlatformAccessories([existingSegmentAccessory]);
-        } else {
-          this.log.info('Adding new segment accessory:', segmentName);
-          const segmentAccessory = new this.api.platformAccessory(segmentName, segmentUuid);
-          segmentAccessory.context.device = device;
-          segmentAccessory.context.segmentIndex = i;
-          
-          new WLEDSegmentAccessory(this, segmentAccessory, wledDevice, i);
-          this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [segmentAccessory]);
-        }
-      }
-    }).catch(error => {
-      this.log.error(`Failed to get segments for device: ${device.name}`, error);
-    });
-  }
-  
-  /**
-   * Helper function to create preset accessory for a device
-   */
-  private createPresetAccessory(device: any, wledDevice: WLEDDevice): void {
-    const presetUuid = this.api.hap.uuid.generate(`${device.host}-presets`);
-    const presetName = `${device.name} Presets`;
-    
-    const existingPresetAccessory = this.accessories.find(accessory => accessory.UUID === presetUuid);
-
-    if (existingPresetAccessory) {
-      this.log.info('Restoring existing preset accessory from cache:', existingPresetAccessory.displayName);
-      new WLEDPresetAccessory(this, existingPresetAccessory, wledDevice);
-      this.api.updatePlatformAccessories([existingPresetAccessory]);
-    } else {
-      this.log.info('Adding new preset accessory:', presetName);
-      const presetAccessory = new this.api.platformAccessory(presetName, presetUuid);
-      presetAccessory.context.device = device;
-      presetAccessory.category = this.api.hap.Categories.SWITCH;
-      
-      new WLEDPresetAccessory(this, presetAccessory, wledDevice);
-      this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [presetAccessory]);
-    }
-  }
 
   /**
    * Process manually configured devices
@@ -333,7 +245,7 @@ export class WLEDPlatform implements DynamicPlatformPlugin {
         this.log.info('Adding new accessory:', device.name);
 
         // create a new accessory
-        const accessory = new this.api.platformAccessory(device.name, uuid);
+        const accessory = new this.api.platformAccessory(device.name, uuid, this.api.hap.Categories.TELEVISION);
 
         // store a copy of the device object in the `accessory.context`
         accessory.context.device = device;
@@ -343,60 +255,25 @@ export class WLEDPlatform implements DynamicPlatformPlugin {
 
         // link the accessory to your platform
         this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
-
-        // Create segment accessories if enabled
-        if (deviceSettings.useSegments) {
-          this.createSegmentAccessories(device, wledDevice);
-        }
-        
-        // Create preset accessory for preset control if enabled
-        if (deviceSettings.usePresetService !== false) { // Default to true if not specified
-          this.createPresetAccessory(device, wledDevice);
-        }
       }
     }
 
-    // We don't remove accessories that were auto-discovered but are no longer manually configured,
-    // since they might still be available on the network and tracked by the discovery service.
-    // The discovery service will handle device removal if they truly disappear from the network.
-    
-    // Only remove accessories that were manually configured but are no longer in the config
-    const manualAccessories = this.accessories.filter(accessory => {
-      // Check if this is a manually configured accessory (not auto-discovered)
-      // This is a rough heuristic - accessories from config.devices will have been explicitly added
+    // Check which accessories are no longer in the config and should be removed
+    for (const accessory of this.accessories) {
       const device = accessory.context.device;
       if (!device) {
-        return false;
+        continue;
       }
-      
-      // If it's a segment or preset accessory, check if its parent device was manually configured
-      if (accessory.context.segmentIndex !== undefined || accessory.UUID.includes('-presets')) {
-        const parentHost = device.host;
-        return devices.some((configuredDevice: any) => configuredDevice.host === parentHost);
-      }
-      
-      // For main device accessories, check if they were manually configured
-      return devices.some((configuredDevice: any) => 
-        this.api.hap.uuid.generate(configuredDevice.host) === accessory.UUID
-      );
-    });
-    
-    // Check which manual accessories are no longer in the config
-    for (const accessory of manualAccessories) {
-      const device = accessory.context.device;
-      
+
       // Check if the accessory's device is still configured
-      const isConfigured = devices.some((configuredDevice: any) => 
-        this.api.hap.uuid.generate(configuredDevice.host) === accessory.UUID || 
-        (accessory.context.segmentIndex !== undefined && 
-          this.api.hap.uuid.generate(`${configuredDevice.host}-segment-${accessory.context.segmentIndex}`) === accessory.UUID) ||
-        this.api.hap.uuid.generate(`${configuredDevice.host}-presets`) === accessory.UUID
+      const isConfigured = devices.some((configuredDevice: any) =>
+        this.api.hap.uuid.generate(configuredDevice.host) === accessory.UUID
       );
 
       if (!isConfigured) {
         this.log.info('Removing existing accessory from cache:', accessory.displayName);
-        
-        // If this is a main device, clean up the WLED device instance
+
+        // Clean up the WLED device instance
         const deviceUuid = accessory.UUID;
         if (this.wledDevices.has(deviceUuid)) {
           const wledDevice = this.wledDevices.get(deviceUuid);
@@ -405,7 +282,7 @@ export class WLEDPlatform implements DynamicPlatformPlugin {
           }
           this.wledDevices.delete(deviceUuid);
         }
-        
+
         this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
       }
     }

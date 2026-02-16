@@ -345,7 +345,8 @@ export class WLEDDevice {
 
       // Update active preset ID if present in the response
       if (data.ps !== undefined) {
-        this.activePresetId = data.ps;
+        // WLED uses -1 to indicate no preset is active
+        this.activePresetId = data.ps >= 0 ? data.ps : -1;
       }
 
       // Convert RGB to HSV
@@ -914,7 +915,7 @@ export class WLEDDevice {
         return this.presets;
       }
 
-      const response = await axios.get(`${this.baseUrl}/presets.json`);
+      const response = await axios.get(`http://${this.host}:${this.port}/presets.json`);
       const rawPresets = response.data || {};
 
       // Process presets to have a more useful format
@@ -927,14 +928,12 @@ export class WLEDDevice {
 
       for (const [id, data] of Object.entries(rawPresets)) {
         if (typeof data === 'object' && data !== null) {
-          // Extract a name for the preset
-          let name = `Preset ${id}`;
+          // Extract name (n) and quick label (ql) for the preset
+          const n = ('n' in data && typeof data.n === 'string') ? data.n : `Preset ${id}`;
+          const ql = ('ql' in data && typeof data.ql === 'string') ? data.ql : '';
 
-          if ('n' in data && typeof data.n === 'string') {
-            name = data.n;
-          } else if ('name' in data && typeof data.name === 'string') {
-            name = data.name;
-          }
+          // Construct the full name/label
+          const name = (ql ? `${ql} ` : '') + `${n}`;
 
           this.presets[id] = {
             name,
