@@ -48,21 +48,19 @@ export class WLEDDiscoveryService {
    * Start the discovery process
    */
   public startDiscovery(): void {
-    this.log.info('=== startDiscovery() called ===');
     if (this.isDiscovering) {
       this.log.debug('Discovery already running');
       return;
     }
 
     this.isDiscovering = true;
-    this.log.info('Setting isDiscovering = true, calling discoverDevices()');
+    this.log.info('Starting WLED device discovery');
     this.discoverDevices();
 
     // Setup periodic rediscovery
     this.discoveryTimer = setInterval(() => {
       this.discoverDevices();
     }, this.DISCOVERY_INTERVAL);
-    this.log.info('Discovery timer set up');
   }
 
   /**
@@ -91,17 +89,11 @@ export class WLEDDiscoveryService {
    * Run discovery process to find WLED devices on the network
    */
   private discoverDevices(): void {
-    this.log.info('=== discoverDevices() called ===');
-    this.log.info('Starting WLED device discovery');
-    this.log.info('Current discovered devices count:', this.discoveredDevices.size);
-    this.log.info('Discovery listeners count:', this.discoveryListeners.length);
+    this.log.debug(`Starting discovery - ${this.discoveredDevices.size} device(s) already found`);
 
     // Start all discovery methods in parallel
-    this.log.info('Starting mDNS discovery...');
     this.discoverWithMDNS();
-    this.log.info('Starting UDP discovery...');
     this.discoverWithUDP();
-    this.log.info('Both discovery methods initiated');
   }
 
   /**
@@ -181,13 +173,12 @@ export class WLEDDiscoveryService {
 
       this.mdnsBrowser.on('serviceUp', (service) => {
         foundAny = true;
-        this.log.info(`!!! mDNS service UP: ${service.name} at ${service.host}:${service.port}`);
+        this.log.debug(`Found mDNS service: ${service.name} at ${service.host}:${service.port}`);
 
         // Remove trailing period from hostname (common in mDNS FQDNs)
         const host = service.host.replace(/\.$/, '');
         const port = service.port || 80;
 
-        this.log.info(`Adding to check queue: ${host}:${port}`);
         // Add to queue for synchronous checking
         this.queueDeviceCheck(host, port, 'mdns');
       });
@@ -230,11 +221,10 @@ export class WLEDDiscoveryService {
         this.udpSocket = dgram.createSocket('udp4');
 
         this.udpSocket.on('message', (msg, rinfo) => {
-          this.log.info(`!!! UDP response from ${rinfo.address}:${rinfo.port}`);
+          this.log.debug(`Received UDP response from ${rinfo.address}:${rinfo.port}`);
 
           // Any response indicates a WLED device
           // Add to queue for synchronous checking
-          this.log.info(`Adding UDP device to check queue: ${rinfo.address}:80`);
           this.queueDeviceCheck(rinfo.address, 80, 'ssdp');
         });
 
@@ -465,11 +455,9 @@ export class WLEDDiscoveryService {
    */
   private notifyListeners(): void {
     const devices = this.getDiscoveredDevices();
-    this.log.info(`=== notifyListeners() called with ${devices.length} devices ===`);
-    this.log.info(`Notifying ${this.discoveryListeners.length} listener(s)`);
+    this.log.debug(`Notifying ${this.discoveryListeners.length} listener(s) with ${devices.length} device(s)`);
     for (const listener of this.discoveryListeners) {
       try {
-        this.log.debug('Calling listener function');
         listener(devices);
       } catch (error) {
         this.log.error('Error in discovery listener:', error);
