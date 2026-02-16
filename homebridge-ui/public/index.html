@@ -1,0 +1,1065 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WLED Configuration</title>
+  <style>
+    .device-list {
+      margin-top: 20px;
+    }
+
+    .device-card {
+      border: 1px solid #dee2e6;
+      border-radius: 8px;
+      padding: 15px;
+      margin-bottom: 15px;
+      background-color: #f8f9fa;
+    }
+
+    .device-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .device-name {
+      font-weight: bold;
+      font-size: 1.1em;
+      color: #212529;
+    }
+
+    .device-info {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 8px;
+      font-size: 0.9em;
+      color: #6c757d;
+    }
+
+    .device-label {
+      font-weight: 600;
+      color: #495057;
+    }
+
+    .discovery-badge {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 0.75em;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .badge-mdns {
+      background-color: #d1ecf1;
+      color: #0c5460;
+    }
+
+    .badge-ssdp {
+      background-color: #d4edda;
+      color: #155724;
+    }
+
+    .badge-direct {
+      background-color: #fff3cd;
+      color: #856404;
+    }
+
+    .btn {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 1em;
+      transition: background-color 0.3s;
+    }
+
+    .btn-primary {
+      background-color: #007bff;
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background-color: #0056b3;
+    }
+
+    .btn-primary:disabled {
+      background-color: #6c757d;
+      cursor: not-allowed;
+    }
+
+    .btn-success {
+      background-color: #28a745;
+      color: white;
+      padding: 6px 12px;
+      font-size: 0.9em;
+    }
+
+    .btn-success:hover {
+      background-color: #218838;
+    }
+
+    .spinner {
+      border: 3px solid #f3f3f3;
+      border-top: 3px solid #007bff;
+      border-radius: 50%;
+      width: 20px;
+      height: 20px;
+      animation: spin 1s linear infinite;
+      display: inline-block;
+      margin-left: 10px;
+      vertical-align: middle;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .alert {
+      padding: 12px;
+      margin-bottom: 20px;
+      border-radius: 5px;
+    }
+
+    .alert-info {
+      background-color: #d1ecf1;
+      color: #0c5460;
+      border: 1px solid #bee5eb;
+    }
+
+    .alert-warning {
+      background-color: #fff3cd;
+      color: #856404;
+      border: 1px solid #ffeaa7;
+    }
+
+    .no-devices {
+      text-align: center;
+      padding: 40px;
+      color: #6c757d;
+    }
+
+    .settings-section {
+      background-color: #fff;
+      border: 1px solid #dee2e6;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 30px;
+    }
+
+    .settings-section h4 {
+      margin-top: 0;
+      margin-bottom: 15px;
+      color: #212529;
+    }
+
+    .form-group {
+      margin-bottom: 15px;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: 600;
+      color: #495057;
+    }
+
+    .form-control {
+      width: 100%;
+      padding: 8px 12px;
+      border: 1px solid #ced4da;
+      border-radius: 4px;
+      font-size: 1em;
+    }
+
+    .toggle-switch {
+      position: relative;
+      display: inline-block;
+      width: 50px;
+      height: 24px;
+    }
+
+    .toggle-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .toggle-slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #ccc;
+      transition: .4s;
+      border-radius: 24px;
+    }
+
+    .toggle-slider:before {
+      position: absolute;
+      content: "";
+      height: 18px;
+      width: 18px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: .4s;
+      border-radius: 50%;
+    }
+
+    input:checked + .toggle-slider {
+      background-color: #28a745;
+    }
+
+    input:checked + .toggle-slider:before {
+      transform: translateX(26px);
+    }
+
+    .device-enabled {
+      border-left: 4px solid #28a745;
+    }
+
+    .device-disabled {
+      border-left: 4px solid #dc3545;
+      opacity: 0.7;
+    }
+
+    .device-actions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      margin-top: 10px;
+    }
+
+    .btn-danger {
+      background-color: #dc3545;
+      color: white;
+      padding: 6px 12px;
+      font-size: 0.9em;
+    }
+
+    .btn-danger:hover {
+      background-color: #c82333;
+    }
+
+    .status-badge {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 0.75em;
+      font-weight: 600;
+    }
+
+    .status-enabled {
+      background-color: #d4edda;
+      color: #155724;
+    }
+
+    .status-disabled {
+      background-color: #f8d7da;
+      color: #721c24;
+    }
+
+    .tabs {
+      display: flex;
+      border-bottom: 2px solid #dee2e6;
+      margin-bottom: 20px;
+    }
+
+    .tab {
+      padding: 10px 20px;
+      cursor: pointer;
+      border: none;
+      background: none;
+      font-size: 1em;
+      color: #6c757d;
+      border-bottom: 3px solid transparent;
+      transition: all 0.3s;
+    }
+
+    .tab:hover {
+      color: #007bff;
+    }
+
+    .tab.active {
+      color: #007bff;
+      border-bottom-color: #007bff;
+      font-weight: 600;
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h3>WLED Plugin Configuration</h3>
+
+    <!-- Tab Navigation -->
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('devices')">Configured Devices</button>
+      <button class="tab" onclick="switchTab('discovery')">Device Discovery</button>
+      <button class="tab" onclick="switchTab('settings')">Plugin Settings</button>
+    </div>
+
+    <!-- Configured Devices Tab -->
+    <div id="devicesTab" class="tab-content active">
+      <div class="alert alert-info">
+        Manage your configured WLED devices. Enable or disable devices, or remove them from your configuration.
+      </div>
+      <div id="configuredDeviceList" class="device-list">
+        <div class="no-devices">Loading configured devices...</div>
+      </div>
+    </div>
+
+    <!-- Discovery Tab -->
+    <div id="discoveryTab" class="tab-content">
+      <div class="alert alert-info">
+        Click the "Start Discovery" button to scan your network for WLED devices. Discovery uses both mDNS and UDP protocols to find devices.
+      </div>
+
+      <div style="margin-bottom: 20px;">
+        <button id="discoverBtn" class="btn btn-primary" onclick="startDiscovery()">
+          Start Discovery
+        </button>
+        <span id="discoveringSpinner" class="spinner" style="display: none;"></span>
+      </div>
+
+      <div id="discoveredDeviceList" class="device-list">
+        <!-- Devices will be populated here -->
+      </div>
+    </div>
+
+    <!-- Settings Tab -->
+    <div id="settingsTab" class="tab-content">
+      <div class="settings-section">
+        <h4>Plugin Settings</h4>
+
+        <div class="form-group">
+          <label for="logLevel">Log Level</label>
+          <select id="logLevel" class="form-control" onchange="saveLogLevel()">
+            <option value="error">Error - Only show errors</option>
+            <option value="warn">Warning - Show warnings and errors</option>
+            <option value="info">Info - Show general information (default)</option>
+            <option value="debug">Debug - Show detailed debugging information</option>
+          </select>
+          <small style="color: #6c757d; margin-top: 5px; display: block;">
+            Changes require Homebridge restart to take effect.
+          </small>
+        </div>
+
+        <div class="form-group">
+          <label for="pollInterval">Default Poll Interval (seconds)</label>
+          <input type="number" id="pollInterval" class="form-control" min="5" max="60" value="10" onchange="savePollInterval()">
+          <small style="color: #6c757d; margin-top: 5px; display: block;">
+            How often to poll devices when WebSocket is not available. Applies to new devices only.
+          </small>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let isDiscovering = false;
+    let currentConfig = null;
+
+    // Tab switching
+    function switchTab(tabName) {
+      // Hide all tabs
+      document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+      document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+
+      // Show selected tab
+      document.getElementById(tabName + 'Tab').classList.add('active');
+      event.target.classList.add('active');
+
+      // Load data for the tab
+      if (tabName === 'devices') {
+        loadConfiguredDevices();
+      } else if (tabName === 'settings') {
+        loadSettings();
+      }
+    }
+
+    // Load configured devices from config
+    async function loadConfiguredDevices() {
+      console.log('[UI] Loading configured devices...');
+      const deviceList = document.getElementById('configuredDeviceList');
+
+      // Show loading state
+      deviceList.innerHTML = '<div class="no-devices">Loading...</div>';
+
+      try {
+        console.log('[UI] Fetching config and cached accessories... foo!');
+
+        // Load both config devices and cached accessories
+        const configPromise = window.homebridge.getPluginConfig();
+
+        console.log('[UI] Making request to /cached-accessories...');
+        const cachedPromise = window.homebridge.request('/cached-accessories')
+          .then(result => {
+            console.log('[UI] Cached accessories response received:', result);
+            return result;
+          })
+          .catch(err => {
+            console.error('[UI] Error fetching cached accessories:', err);
+            return { accessories: [] };
+          });
+
+        console.log('[UI] cachedPromise created:', cachedPromise);
+
+        // Add timeout to prevent infinite hanging
+        const timeoutPromise = new Promise((resolve) => {
+          setTimeout(() => {
+            console.warn('[UI] Timeout waiting for promises, using fallback data');
+            resolve([null, { accessories: [] }]);
+          }, 5000);
+        });
+
+        const result = await Promise.race([
+          Promise.all([configPromise, cachedPromise]),
+          timeoutPromise
+        ]);
+
+        const [configData, cachedData] = result || [null, { accessories: [] }];
+
+        currentConfig = configData;
+
+        console.log('[UI] Config loaded:', !!configData, 'length:', configData?.length);
+        console.log('[UI] Cached loaded:', cachedData?.accessories?.length || 0, 'accessories');
+        console.log('[UI] Full config:', JSON.stringify(configData, null, 2));
+        console.log('[UI] Cached accessories:', JSON.stringify(cachedData, null, 2));
+
+        // Get configured devices from config
+        let configDevices = [];
+        if (configData && configData.length > 0) {
+          const pluginConfig = configData[0];
+          console.log('[UI] Plugin config:', JSON.stringify(pluginConfig, null, 2));
+
+          if (pluginConfig.manualDevicesSection && pluginConfig.manualDevicesSection.devices) {
+            configDevices = pluginConfig.manualDevicesSection.devices;
+          } else if (pluginConfig.devices) {
+            configDevices = pluginConfig.devices;
+          }
+        }
+
+        // Get cached accessories
+        const cachedAccessories = cachedData.accessories || [];
+
+        // Merge both lists (cached accessories that aren't in config)
+        const allDevices = [...configDevices];
+
+        // Add cached accessories that aren't already in the config
+        for (const cached of cachedAccessories) {
+          const existsInConfig = configDevices.some(d =>
+            d.host === cached.host || d.name === cached.name
+          );
+          if (!existsInConfig) {
+            allDevices.push({
+              ...cached,
+              isCached: true // Mark as cached so we can show it differently
+            });
+          }
+        }
+
+        console.log('[UI] Total devices to display:', allDevices.length);
+        console.log('[UI] Config devices:', configDevices.length, 'Cached only:', cachedAccessories.length - configDevices.length);
+
+        if (allDevices.length === 0) {
+          deviceList.innerHTML = `
+            <div class="no-devices">
+              <p>No devices configured or cached yet.</p>
+              <p>Use the "Device Discovery" tab to find and add WLED devices.</p>
+            </div>
+          `;
+          return;
+        }
+
+        deviceList.innerHTML = allDevices.map((device, index) => {
+          // Ensure device is an object
+          if (!device || typeof device !== 'object') {
+            console.error('Invalid device at index', index, ':', device);
+            return `
+              <div class="device-card device-disabled">
+                <div class="device-header">
+                  <div class="device-name">Invalid Device Configuration</div>
+                  <span class="status-badge status-disabled">Error</span>
+                </div>
+                <div class="device-info">
+                  <span class="device-label">Issue:</span>
+                  <span>Device configuration is malformed</span>
+                </div>
+                <div class="device-actions">
+                  <button class="btn btn-danger" onclick="removeDevice(${index}, 'Invalid Device')">
+                    Remove
+                  </button>
+                </div>
+              </div>
+            `;
+          }
+
+          const enabled = device.enabled !== false; // Default to enabled if not specified
+          const isCached = device.isCached === true; // Is this a cached-only device?
+          const statusClass = enabled ? 'device-enabled' : 'device-disabled';
+          const statusBadge = enabled ? 'status-enabled' : 'status-disabled';
+          const statusText = enabled ? 'Enabled' : 'Disabled';
+
+          const deviceName = device.name || 'Unnamed Device';
+          const deviceHost = device.host || 'Unknown';
+          const devicePort = device.port || 80;
+
+          return `
+            <div class="device-card ${statusClass}">
+              <div class="device-header">
+                <div class="device-name">${deviceName}</div>
+                <div>
+                  ${isCached ? '<span class="discovery-badge badge-direct">CACHED</span> ' : ''}
+                  <span class="status-badge ${statusBadge}">${statusText}</span>
+                </div>
+              </div>
+              <div class="device-info">
+                <span class="device-label">Host:</span>
+                <span>${deviceHost}:${devicePort}</span>
+
+                <span class="device-label">WebSocket:</span>
+                <span>${device.deviceSettings?.useWebSockets !== false ? 'Enabled' : 'Disabled'}</span>
+
+                <span class="device-label">Poll Interval:</span>
+                <span>${device.deviceSettings?.pollInterval || 10}s</span>
+
+                <span class="device-label">Presets:</span>
+                <span>${device.deviceSettings?.usePresetService !== false ? 'Enabled' : 'Disabled'}</span>
+
+                <span class="device-label">Segments:</span>
+                <span>${device.deviceSettings?.useSegments ? 'Enabled' : 'Disabled'}</span>
+              </div>
+              <div class="device-actions">
+                ${isCached ? `
+                  <span style="color: #856404; font-size: 0.9em;">
+                    ⚠️ This device is cached by Homebridge but not in your config.
+                    Add it to config to manage it here.
+                  </span>
+                ` : `
+                  <label class="toggle-switch">
+                    <input type="checkbox" ${enabled ? 'checked' : ''} onchange="toggleDevice(${index}, this.checked)">
+                    <span class="toggle-slider"></span>
+                  </label>
+                  <span style="color: #6c757d; font-size: 0.9em;">
+                    ${enabled ? 'Enabled' : 'Disabled'}
+                  </span>
+                  <button class="btn btn-danger" onclick="removeDevice(${index}, '${deviceName.replace(/'/g, "\\'")}')">
+                    Remove
+                  </button>
+                `}
+              </div>
+            </div>
+          `;
+        }).join('');
+      } catch (error) {
+        console.error('[UI] Error loading configured devices:', error);
+        console.error('[UI] Error stack:', error.stack);
+        deviceList.innerHTML = `
+          <div class="alert alert-warning">
+            <strong>Failed to load configured devices:</strong><br>
+            ${error.message}<br>
+            <small>Check the browser console (F12) for more details.</small>
+          </div>
+        `;
+      }
+    }
+
+    // Get devices array from config (handles both structures)
+    function getDevicesArray(config) {
+      if (config[0].manualDevicesSection && config[0].manualDevicesSection.devices) {
+        return config[0].manualDevicesSection.devices;
+      } else if (config[0].devices) {
+        return config[0].devices;
+      }
+      return null;
+    }
+
+    // Toggle device enabled/disabled
+    async function toggleDevice(index, enabled) {
+      try {
+        const config = await window.homebridge.getPluginConfig();
+        const devices = getDevicesArray(config);
+
+        if (!devices || !devices[index]) {
+          throw new Error('Device not found');
+        }
+
+        devices[index].enabled = enabled;
+
+        await window.homebridge.updatePluginConfig(config);
+        await window.homebridge.toast.success(
+          `Device ${enabled ? 'enabled' : 'disabled'}. Restart Homebridge for changes to take effect.`,
+          'Device Updated'
+        );
+
+        // Reload the list
+        loadConfiguredDevices();
+      } catch (error) {
+        console.error('Error toggling device:', error);
+        await window.homebridge.toast.error(`Failed to update device: ${error.message}`, 'Error');
+      }
+    }
+
+    // Remove device from config
+    async function removeDevice(index, name) {
+      if (!confirm(`Are you sure you want to remove "${name}" from your configuration?`)) {
+        return;
+      }
+
+      try {
+        const config = await window.homebridge.getPluginConfig();
+        const devices = getDevicesArray(config);
+
+        if (!devices) {
+          throw new Error('Devices array not found in config');
+        }
+
+        devices.splice(index, 1);
+
+        await window.homebridge.updatePluginConfig(config);
+        await window.homebridge.toast.success(
+          `Removed ${name} from configuration. Restart Homebridge for changes to take effect.`,
+          'Device Removed'
+        );
+
+        // Reload the list
+        loadConfiguredDevices();
+      } catch (error) {
+        console.error('Error removing device:', error);
+        await window.homebridge.toast.error(`Failed to remove device: ${error.message}`, 'Error');
+      }
+    }
+
+    // Load plugin settings
+    async function loadSettings() {
+      try {
+        const config = await window.homebridge.getPluginConfig();
+
+        if (config && config[0]) {
+          document.getElementById('logLevel').value = config[0].logLevel || 'info';
+          document.getElementById('pollInterval').value = config[0].defaultPollInterval || 10;
+        }
+      } catch (error) {
+        console.error('Error loading settings:', error);
+      }
+    }
+
+    // Save log level
+    async function saveLogLevel() {
+      try {
+        const config = await window.homebridge.getPluginConfig();
+        const logLevel = document.getElementById('logLevel').value;
+
+        config[0].logLevel = logLevel;
+
+        await window.homebridge.updatePluginConfig(config);
+        await window.homebridge.toast.success(
+          'Log level updated. Restart Homebridge for changes to take effect.',
+          'Settings Saved'
+        );
+      } catch (error) {
+        console.error('Error saving log level:', error);
+        await window.homebridge.toast.error(`Failed to save settings: ${error.message}`, 'Error');
+      }
+    }
+
+    // Save poll interval
+    async function savePollInterval() {
+      try {
+        const config = await window.homebridge.getPluginConfig();
+        const pollInterval = parseInt(document.getElementById('pollInterval').value);
+
+        if (pollInterval < 5 || pollInterval > 60) {
+          await window.homebridge.toast.warning('Poll interval must be between 5 and 60 seconds', 'Invalid Value');
+          return;
+        }
+
+        config[0].defaultPollInterval = pollInterval;
+
+        await window.homebridge.updatePluginConfig(config);
+        await window.homebridge.toast.success(
+          'Default poll interval updated. This applies to new devices only.',
+          'Settings Saved'
+        );
+      } catch (error) {
+        console.error('Error saving poll interval:', error);
+        await window.homebridge.toast.error(`Failed to save settings: ${error.message}`, 'Error');
+      }
+    }
+
+    // Start discovery
+    async function startDiscovery() {
+      const btn = document.getElementById('discoverBtn');
+      const spinner = document.getElementById('discoveringSpinner');
+      const deviceList = document.getElementById('discoveredDeviceList');
+
+      btn.disabled = true;
+      spinner.style.display = 'inline-block';
+      isDiscovering = true;
+
+      deviceList.innerHTML = `
+        <div class="no-devices">
+          <p><strong>Scanning network for WLED devices...</strong></p>
+          <p style="font-size: 0.9em; color: #6c757d;">
+            This may take up to 70 seconds. Each device is checked individually for reliability.
+          </p>
+          <p style="font-size: 0.9em; color: #6c757d;">
+            Devices will appear below as they are discovered.
+          </p>
+        </div>
+      `;
+
+      try {
+        console.log('[UI] Starting discovery...');
+        const response = await window.homebridge.request('/discover');
+        console.log(response);
+        console.log('[UI] Discovery response:', response);
+
+        // Poll for devices while discovering
+        const pollInterval = setInterval(async () => {
+          try {
+            const devicesResponse = await window.homebridge.request('/devices');
+            console.log('[UI] Poll response:', devicesResponse);
+            await displayDiscoveredDevices(devicesResponse.devices);
+
+            if (!devicesResponse.isDiscovering) {
+              console.log('[UI] Discovery complete');
+              clearInterval(pollInterval);
+              btn.disabled = false;
+              spinner.style.display = 'none';
+              isDiscovering = false;
+            }
+          } catch (pollError) {
+            console.error('[UI] Polling error:', pollError);
+          }
+        }, 1000);
+
+        // Stop polling after 75 seconds (discovery takes up to 70s)
+        setTimeout(() => {
+          clearInterval(pollInterval);
+          btn.disabled = false;
+          spinner.style.display = 'none';
+          isDiscovering = false;
+        }, 75000);
+
+      } catch (error) {
+        console.error('Discovery error:', error);
+        btn.disabled = false;
+        spinner.style.display = 'none';
+        isDiscovering = false;
+
+        deviceList.innerHTML = `
+          <div class="alert alert-warning">
+            Failed to start discovery: ${error.message}
+          </div>
+        `;
+      }
+    }
+
+    async function displayDiscoveredDevices(devices) {
+      console.log('[UI] displayDiscoveredDevices called with:', devices);
+      const deviceList = document.getElementById('discoveredDeviceList');
+
+      if (!devices || devices.length === 0) {
+        console.log('[UI] No devices to display. isDiscovering:', isDiscovering);
+        if (!isDiscovering) {
+          deviceList.innerHTML = `
+            <div class="no-devices">
+              <p>No WLED devices found on your network.</p>
+              <p>Make sure your WLED devices are powered on and connected to the same network.</p>
+            </div>
+          `;
+        }
+        return;
+      }
+
+      console.log('[UI] Displaying', devices.length, 'devices');
+
+      // Get current config to check which devices are already added
+      const config = await window.homebridge.getPluginConfig();
+      const configuredDevices = getDevicesArray(config) || [];
+
+      deviceList.innerHTML = devices.map((device, discoveryIndex) => {
+        // Find if this device is already configured
+        const configIndex = configuredDevices.findIndex(d => d.host === device.host);
+        const isConfigured = configIndex !== -1;
+        const configuredDevice = isConfigured ? configuredDevices[configIndex] : null;
+        const isEnabled = configuredDevice ? (configuredDevice.enabled !== false) : true;
+
+        const statusBadge = isConfigured
+          ? (isEnabled ? 'status-enabled' : 'status-disabled')
+          : '';
+        const statusText = isConfigured
+          ? (isEnabled ? 'Enabled' : 'Disabled')
+          : 'Not Configured';
+
+        const cardClass = isConfigured
+          ? (isEnabled ? 'device-enabled' : 'device-disabled')
+          : '';
+
+        return `
+          <div class="device-card ${cardClass}">
+            <div class="device-header">
+              <div class="device-name">${device.name}</div>
+              <div>
+                <span class="discovery-badge badge-${device.discoveryMethod}">${device.discoveryMethod.toUpperCase()}</span>
+                <span class="status-badge ${statusBadge}" style="margin-left: 8px;">${statusText}</span>
+              </div>
+            </div>
+            <div class="device-info">
+              <span class="device-label">Host:</span>
+              <span>${device.host}:${device.port}</span>
+
+              <span class="device-label">ID:</span>
+              <span>${device.id}</span>
+
+              ${device.info ? `
+                <span class="device-label">Version:</span>
+                <span>${device.info.version}</span>
+
+                <span class="device-label">MAC Address:</span>
+                <span>${device.info.macAddress}</span>
+
+                <span class="device-label">LED Count:</span>
+                <span>${device.info.ledCount}</span>
+              ` : ''}
+            </div>
+            <div class="device-actions">
+              ${isConfigured ? `
+                <label class="toggle-switch">
+                  <input type="checkbox" ${isEnabled ? 'checked' : ''} onchange="toggleDiscoveredDevice(${configIndex}, this.checked)">
+                  <span class="toggle-slider"></span>
+                </label>
+                <span style="color: #6c757d; font-size: 0.9em;">
+                  ${isEnabled ? 'Enabled' : 'Disabled'}
+                </span>
+                <button class="btn btn-danger" onclick="removeDiscoveredDevice(${configIndex}, '${device.name}')">
+                  Remove
+                </button>
+              ` : `
+                <button class="btn btn-success" onclick="addDeviceToConfig('${device.host}', '${device.name}', ${device.port})">
+                  Add to Configuration
+                </button>
+              `}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Toggle device from discovery view
+    async function toggleDiscoveredDevice(configIndex, enabled) {
+      try {
+        const config = await window.homebridge.getPluginConfig();
+        const devices = getDevicesArray(config);
+
+        if (!devices || !devices[configIndex]) {
+          throw new Error('Device not found');
+        }
+
+        devices[configIndex].enabled = enabled;
+
+        await window.homebridge.updatePluginConfig(config);
+        await window.homebridge.toast.success(
+          `Device ${enabled ? 'enabled' : 'disabled'}. Restart Homebridge for changes to take effect.`,
+          'Device Updated'
+        );
+
+        // Refresh the discovered devices list
+        const response = await window.homebridge.request('/devices');
+        await displayDiscoveredDevices(response.devices);
+      } catch (error) {
+        console.error('Error toggling device:', error);
+        await window.homebridge.toast.error(`Failed to update device: ${error.message}`, 'Error');
+      }
+    }
+
+    // Remove device from discovery view
+    async function removeDiscoveredDevice(configIndex, name) {
+      if (!confirm(`Are you sure you want to remove "${name}" from your configuration?`)) {
+        return;
+      }
+
+      try {
+        const config = await window.homebridge.getPluginConfig();
+        const devices = getDevicesArray(config);
+
+        if (!devices) {
+          throw new Error('Devices array not found in config');
+        }
+
+        devices.splice(configIndex, 1);
+
+        await window.homebridge.updatePluginConfig(config);
+        await window.homebridge.toast.success(
+          `Removed ${name} from configuration. Restart Homebridge for changes to take effect.`,
+          'Device Removed'
+        );
+
+        // Refresh the discovered devices list
+        const response = await window.homebridge.request('/devices');
+        await displayDiscoveredDevices(response.devices);
+      } catch (error) {
+        console.error('Error removing device:', error);
+        await window.homebridge.toast.error(`Failed to update device: ${error.message}`, 'Error');
+      }
+    }
+
+    async function addDeviceToConfig(host, name, port) {
+      try {
+        // Get current config
+        const config = await window.homebridge.getPluginConfig();
+
+        console.log('Adding device - current config:', JSON.stringify(config, null, 2));
+
+        // Ensure config structure exists
+        if (!config || config.length === 0) {
+          throw new Error('Plugin configuration not found');
+        }
+
+        // Initialize manualDevicesSection if it doesn't exist
+        if (!config[0].manualDevicesSection) {
+          config[0].manualDevicesSection = { devices: [] };
+        }
+
+        if (!config[0].manualDevicesSection.devices) {
+          config[0].manualDevicesSection.devices = [];
+        }
+
+        // Get devices array
+        const devices = config[0].manualDevicesSection.devices;
+
+        // Check if device already exists
+        const exists = devices.some(d => d && d.host === host);
+
+        if (exists) {
+          await window.homebridge.toast.warning(`Device ${name} is already in your configuration`, 'Device Exists');
+          return;
+        }
+
+        // Get default poll interval from settings
+        const defaultPollInterval = config[0].defaultPollInterval || 10;
+
+        // Add the device (enabled by default)
+        devices.push({
+          name: name,
+          host: host,
+          port: port,
+          enabled: true,
+          deviceSettings: {
+            useSegments: false,
+            usePresetService: true,
+            useWebSockets: true,
+            pollInterval: defaultPollInterval
+          }
+        });
+
+        console.log('Updated config:', JSON.stringify(config, null, 2));
+
+        // Save config
+        await window.homebridge.updatePluginConfig(config);
+        await window.homebridge.toast.success(`Added ${name} to configuration. Restart Homebridge for changes to take effect.`, 'Device Added');
+
+        // Refresh the discovered devices list to show it's now configured
+        const response = await window.homebridge.request('/devices');
+        await displayDiscoveredDevices(response.devices);
+
+      } catch (error) {
+        console.error('Error adding device to config:', error);
+        await window.homebridge.toast.error(`Failed to add device: ${error.message}`, 'Error');
+      }
+    }
+
+    // Initialize when page is ready and homebridge object is available
+    let initAttempts = 0;
+    const MAX_INIT_ATTEMPTS = 50; // 5 seconds total
+
+    function initializeUI() {
+      initAttempts++;
+      console.log('[UI] Initializing UI... (attempt', initAttempts, ')');
+      console.log('[UI] window.homebridge available:', !!window.homebridge);
+
+      if (!window.homebridge) {
+        if (initAttempts >= MAX_INIT_ATTEMPTS) {
+          console.error('[UI] window.homebridge never became available!');
+          document.body.innerHTML = `
+            <div style="padding: 20px; max-width: 800px; margin: 0 auto;">
+              <div style="background: #f8d7da; border: 1px solid #f5c6cb; border-radius: 4px; padding: 15px; color: #721c24;">
+                <h3 style="margin-top: 0;">⚠️ UI Not Loaded Properly</h3>
+                <p><strong>The Homebridge Plugin UI utilities are not available.</strong></p>
+                <p>This custom UI must be accessed through the <strong>Homebridge Config UI X</strong> interface, not directly in a browser.</p>
+                <h4>How to access this UI correctly:</h4>
+                <ol>
+                  <li>Open your Homebridge Config UI X (usually at <code>http://homebridge.local:8581</code>)</li>
+                  <li>Navigate to <strong>Plugins</strong></li>
+                  <li>Find <strong>Homebridge WLED</strong> in your installed plugins</li>
+                  <li>Click the <strong>Settings</strong> button (gear icon)</li>
+                </ol>
+                <p style="margin-bottom: 0; font-size: 0.9em; color: #6c757d;">
+                  If you're already in Homebridge Config UI X and seeing this error, try restarting Homebridge.
+                </p>
+              </div>
+            </div>
+          `;
+          return;
+        }
+        console.warn('[UI] window.homebridge not ready yet, retrying in 100ms...');
+        setTimeout(initializeUI, 100);
+        return;
+      }
+
+      console.log('[UI] window.homebridge is ready', window.homebridge);
+
+      // Listen for real-time device updates from the server
+      try {
+        window.homebridge.addEventListener('discoveredDevices', (devices) => {
+          console.log('[UI] Received discoveredDevices event:', devices);
+          displayDiscoveredDevices(devices);
+        });
+        console.log('[UI] Event listener registered');
+      } catch (error) {
+        console.error('[UI] Error registering event listener:', error);
+      }
+
+      // Load configured devices tab (default)
+      loadConfiguredDevices();
+
+      // Also try to load any previously discovered devices
+      (async () => {
+        try {
+          console.log('[UI] Loading initial discovered devices...');
+          const response = await window.homebridge.request('/devices');
+          console.log('[UI] Initial devices response:', response);
+          if (response.devices && response.devices.length > 0) {
+            await displayDiscoveredDevices(response.devices);
+          }
+        } catch (error) {
+          console.error('[UI] Error loading initial discovered devices:', error);
+        }
+      })();
+    }
+
+    // Start initialization when DOM is loaded
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initializeUI);
+    } else {
+      // DOM is already loaded
+      initializeUI();
+    }
+  </script>
+</body>
+</html>

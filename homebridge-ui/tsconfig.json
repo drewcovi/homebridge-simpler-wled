@@ -1,0 +1,20 @@
+{
+  "compilerOptions": {
+    "outDir": "../dist/homebridge-ui",
+    "rootDir": ".",
+    "module": "commonjs",
+    "target": "ES2020",
+    "lib": ["ES2020"],
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true
+  },
+  "include": [
+    "server.ts"
+  ]
+}
