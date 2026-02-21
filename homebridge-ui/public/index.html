@@ -609,7 +609,7 @@
                   <span>Device configuration is malformed</span>
                 </div>
                 <div class="device-actions">
-                  <button class="btn btn-danger" onclick="removeDevice(${index}, 'Invalid Device')">
+                  <button class="btn btn-danger" onclick="removeDevice(${index}, 'Invalid Device', this)">
                     Remove
                   </button>
                 </div>
@@ -666,7 +666,7 @@
                   <span style="color: #6c757d; font-size: 0.9em;">
                     ${enabled ? 'Enabled' : 'Disabled'}
                   </span>
-                  <button class="btn btn-danger" onclick="removeDevice(${index}, '${deviceName.replace(/'/g, "\\'")}')">
+                  <button class="btn btn-danger" onclick="removeDevice(${index}, '${deviceName.replace(/'/g, "\\'")}', this)">
                     Remove
                   </button>
                 `}
@@ -724,8 +724,18 @@
     }
 
     // Remove device from config
-    async function removeDevice(index, name) {
-      if (!confirm(`Are you sure you want to remove "${name}" from your configuration?`)) {
+    async function removeDevice(index, name, btn) {
+      if (!btn.dataset.confirming) {
+        btn.dataset.confirming = 'true';
+        btn.textContent = 'Confirm?';
+        btn.style.backgroundColor = '#ff6b35';
+        setTimeout(() => {
+          if (btn.dataset.confirming) {
+            delete btn.dataset.confirming;
+            btn.textContent = 'Remove';
+            btn.style.backgroundColor = '';
+          }
+        }, 3000);
         return;
       }
 
@@ -956,7 +966,7 @@
                 <span style="color: #6c757d; font-size: 0.9em;">
                   ${isEnabled ? 'Enabled' : 'Disabled'}
                 </span>
-                <button class="btn btn-danger" onclick="removeDiscoveredDevice(${configIndex}, '${device.name}')">
+                <button class="btn btn-danger" onclick="removeDiscoveredDevice(${configIndex}, '${device.name}', this)">
                   Remove
                 </button>
               ` : `
@@ -998,8 +1008,18 @@
     }
 
     // Remove device from discovery view
-    async function removeDiscoveredDevice(configIndex, name) {
-      if (!confirm(`Are you sure you want to remove "${name}" from your configuration?`)) {
+    async function removeDiscoveredDevice(configIndex, name, btn) {
+      if (!btn.dataset.confirming) {
+        btn.dataset.confirming = 'true';
+        btn.textContent = 'Confirm?';
+        btn.style.backgroundColor = '#ff6b35';
+        setTimeout(() => {
+          if (btn.dataset.confirming) {
+            delete btn.dataset.confirming;
+            btn.textContent = 'Remove';
+            btn.style.backgroundColor = '';
+          }
+        }, 3000);
         return;
       }
 
