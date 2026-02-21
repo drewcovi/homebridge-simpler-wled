@@ -407,7 +407,7 @@
 
     <!-- Tab Navigation -->
     <div class="tabs">
-      <button class="tab active" onclick="switchTab('devices')">Configured Devices</button>
+      <button id="devicesTabBtn" class="tab active" onclick="switchTab('devices')">Configured Devices</button>
       <button class="tab" onclick="switchTab('discovery')">Device Discovery</button>
       <button class="tab" onclick="switchTab('presets')">Manage Presets</button>
       <button class="tab" onclick="switchTab('settings')">Plugin Settings</button>
@@ -466,13 +466,6 @@
           </small>
         </div>
 
-        <div class="form-group">
-          <label for="pollInterval">Default Poll Interval (seconds)</label>
-          <input type="number" id="pollInterval" class="form-control" min="5" max="60" value="10" onchange="savePollInterval()">
-          <small style="color: #6c757d; margin-top: 5px; display: block;">
-            How often to poll devices when WebSocket is not available. Applies to new devices only.
-          </small>
-        </div>
       </div>
   </div>
 
@@ -562,6 +555,8 @@
           }
         }
 
+        setDevicesTabCount(configDevices.length);
+
         // Get cached accessories
         const cachedAccessories = cachedData.accessories || [];
 
@@ -640,17 +635,20 @@
                 <span class="device-label">Host:</span>
                 <span>${deviceHost}:${devicePort}</span>
 
-                <span class="device-label">WebSocket:</span>
-                <span>${device.deviceSettings?.useWebSockets !== false ? 'Enabled' : 'Disabled'}</span>
+                ${device.firmwareVersion ? `
+                <span class="device-label">Version:</span>
+                <span>${device.firmwareVersion}</span>
+                ` : ''}
 
-                <span class="device-label">Poll Interval:</span>
-                <span>${device.deviceSettings?.pollInterval || 10}s</span>
+                ${device.macAddress ? `
+                <span class="device-label">MAC Address:</span>
+                <span>${device.macAddress}</span>
+                ` : ''}
 
-                <span class="device-label">Presets:</span>
-                <span>${device.deviceSettings?.usePresetService !== false ? 'Enabled' : 'Disabled'}</span>
-
-                <span class="device-label">Segments:</span>
-                <span>${device.deviceSettings?.useSegments ? 'Enabled' : 'Disabled'}</span>
+                ${device.ledCount ? `
+                <span class="device-label">LED Count:</span>
+                <span>${device.ledCount}</span>
+                ` : ''}
               </div>
               <div class="device-actions">
                 ${isCached ? `
@@ -695,6 +693,14 @@
         return config[0].devices;
       }
       return null;
+    }
+
+    // Update the configured devices tab count badge
+    function setDevicesTabCount(count) {
+      const tabBtn = document.getElementById('devicesTabBtn');
+      if (tabBtn) {
+        tabBtn.textContent = count > 0 ? `Configured Devices (${count})` : 'Configured Devices';
+      }
     }
 
     // Toggle device enabled/disabled
@@ -747,9 +753,18 @@
           throw new Error('Devices array not found in config');
         }
 
+        const host = devices[index]?.host;
+
         devices.splice(index, 1);
+        setDevicesTabCount(devices.length);
 
         await window.homebridge.updatePluginConfig(config);
+
+        // Remove from Homebridge cache immediately
+        if (host) {
+          await window.homebridge.request('/remove-cached-accessory', { host }).catch(() => {});
+        }
+
         await window.homebridge.toast.success(
           `Removed ${name} from configuration. Restart Homebridge for changes to take effect.`,
           'Device Removed'
@@ -770,7 +785,6 @@
 
         if (config && config[0]) {
           document.getElementById('logLevel').value = config[0].logLevel || 'info';
-          document.getElementById('pollInterval').value = config[0].defaultPollInterval || 10;
         }
       } catch (error) {
         console.error('Error loading settings:', error);
@@ -792,30 +806,6 @@
         );
       } catch (error) {
         console.error('Error saving log level:', error);
-        await window.homebridge.toast.error(`Failed to save settings: ${error.message}`, 'Error');
-      }
-    }
-
-    // Save poll interval
-    async function savePollInterval() {
-      try {
-        const config = await window.homebridge.getPluginConfig();
-        const pollInterval = parseInt(document.getElementById('pollInterval').value);
-
-        if (pollInterval < 5 || pollInterval > 60) {
-          await window.homebridge.toast.warning('Poll interval must be between 5 and 60 seconds', 'Invalid Value');
-          return;
-        }
-
-        config[0].defaultPollInterval = pollInterval;
-
-        await window.homebridge.updatePluginConfig(config);
-        await window.homebridge.toast.success(
-          'Default poll interval updated. This applies to new devices only.',
-          'Settings Saved'
-        );
-      } catch (error) {
-        console.error('Error saving poll interval:', error);
         await window.homebridge.toast.error(`Failed to save settings: ${error.message}`, 'Error');
       }
     }
@@ -908,43 +898,37 @@
 
       console.log('[UI] Displaying', devices.length, 'devices');
 
-      // Get current config to check which devices are already added
+      // Get current config to filter out already-configured devices
       const config = await window.homebridge.getPluginConfig();
       const configuredDevices = getDevicesArray(config) || [];
 
-      deviceList.innerHTML = devices.map((device, discoveryIndex) => {
-        // Find if this device is already configured
-        const configIndex = configuredDevices.findIndex(d => d.host === device.host);
-        const isConfigured = configIndex !== -1;
-        const configuredDevice = isConfigured ? configuredDevices[configIndex] : null;
-        const isEnabled = configuredDevice ? (configuredDevice.enabled !== false) : true;
+      // Only show devices that are not yet in the configuration
+      const unconfiguredDevices = devices.filter(device =>
+        !configuredDevices.some(d => d.host === device.host)
+      );
 
-        const statusBadge = isConfigured
-          ? (isEnabled ? 'status-enabled' : 'status-disabled')
-          : '';
-        const statusText = isConfigured
-          ? (isEnabled ? 'Enabled' : 'Disabled')
-          : 'Not Configured';
+      if (unconfiguredDevices.length === 0) {
+        deviceList.innerHTML = `
+          <div class="no-devices">
+            <p>All discovered devices are already configured.</p>
+            <p>Check the "Configured Devices" tab to manage them.</p>
+          </div>
+        `;
+        return;
+      }
 
-        const cardClass = isConfigured
-          ? (isEnabled ? 'device-enabled' : 'device-disabled')
-          : '';
-
+      deviceList.innerHTML = unconfiguredDevices.map((device) => {
         return `
-          <div class="device-card ${cardClass}">
+          <div class="device-card">
             <div class="device-header">
               <div class="device-name">${device.name}</div>
               <div>
                 <span class="discovery-badge badge-${device.discoveryMethod}">${device.discoveryMethod.toUpperCase()}</span>
-                <span class="status-badge ${statusBadge}" style="margin-left: 8px;">${statusText}</span>
               </div>
             </div>
             <div class="device-info">
               <span class="device-label">Host:</span>
               <span>${device.host}:${device.port}</span>
-
-              <span class="device-label">ID:</span>
-              <span>${device.id}</span>
 
               ${device.info ? `
                 <span class="device-label">Version:</span>
@@ -958,22 +942,9 @@
               ` : ''}
             </div>
             <div class="device-actions">
-              ${isConfigured ? `
-                <label class="toggle-switch">
-                  <input type="checkbox" ${isEnabled ? 'checked' : ''} onchange="toggleDiscoveredDevice(${configIndex}, this.checked)">
-                  <span class="toggle-slider"></span>
-                </label>
-                <span style="color: #6c757d; font-size: 0.9em;">
-                  ${isEnabled ? 'Enabled' : 'Disabled'}
-                </span>
-                <button class="btn btn-danger" onclick="removeDiscoveredDevice(${configIndex}, '${device.name}', this)">
-                  Remove
-                </button>
-              ` : `
-                <button class="btn btn-success" onclick="addDeviceToConfig('${device.host}', '${device.name}', ${device.port})">
-                  Add to Configuration
-                </button>
-              `}
+              <button class="btn btn-success" onclick="addDeviceToConfig('${device.host}', '${device.name}', ${device.port}, '${device.info?.version || ''}', '${device.info?.macAddress || ''}', ${device.info?.ledCount || 0})">
+                Add to Configuration
+              </button>
             </div>
           </div>
         `;
@@ -1031,9 +1002,18 @@
           throw new Error('Devices array not found in config');
         }
 
+        const host = devices[configIndex]?.host;
+
         devices.splice(configIndex, 1);
+        setDevicesTabCount(devices.length);
 
         await window.homebridge.updatePluginConfig(config);
+
+        // Remove from Homebridge cache immediately
+        if (host) {
+          await window.homebridge.request('/remove-cached-accessory', { host }).catch(() => {});
+        }
+
         await window.homebridge.toast.success(
           `Removed ${name} from configuration. Restart Homebridge for changes to take effect.`,
           'Device Removed'
@@ -1048,7 +1028,7 @@
       }
     }
 
-    async function addDeviceToConfig(host, name, port) {
+    async function addDeviceToConfig(host, name, port, firmwareVersion, macAddress, ledCount) {
       try {
         // Get current config
         const config = await window.homebridge.getPluginConfig();
@@ -1080,24 +1060,26 @@
           return;
         }
 
-        // Get default poll interval from settings
-        const defaultPollInterval = config[0].defaultPollInterval || 10;
-
-        // Add the device (enabled by default)
-        devices.push({
+        // Build device entry
+        const deviceEntry = {
           name: name,
           host: host,
           port: port,
           enabled: true,
+          ...(firmwareVersion ? { firmwareVersion } : {}),
+          ...(macAddress ? { macAddress } : {}),
+          ...(ledCount ? { ledCount } : {}),
           deviceSettings: {
-            useSegments: false,
             usePresetService: true,
             useWebSockets: true,
-            pollInterval: defaultPollInterval
           }
-        });
+        };
+
+        devices.push(deviceEntry);
 
         console.log('Updated config:', JSON.stringify(config, null, 2));
+
+        setDevicesTabCount(devices.length);
 
         // Save config
         await window.homebridge.updatePluginConfig(config);

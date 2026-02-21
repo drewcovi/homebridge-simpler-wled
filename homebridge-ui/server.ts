@@ -35,6 +35,7 @@ class PluginUiServer extends HomebridgePluginUiServer {
     this.onRequest('/devices', this.handleGetDevices.bind(this));
     this.onRequest('/stop-discovery', this.handleStopDiscovery.bind(this));
     this.onRequest('/cached-accessories', this.handleGetCachedAccessories.bind(this));
+    this.onRequest('/remove-cached-accessory', this.handleRemoveCachedAccessory.bind(this));
     this.onRequest('/get-presets', this.handleGetPresets.bind(this));
 
     // Start the UI server immediately - don't wait for discovery service
@@ -193,10 +194,8 @@ class PluginUiServer extends HomebridgePluginUiServer {
         host: accessory.context?.device?.host || 'Unknown',
         port: accessory.context?.device?.port || 80,
         uuid: accessory.UUID,
-        useSegments: accessory.context?.device?.useSegments || false,
         usePresetService: accessory.context?.device?.usePresetService !== false,
         useWebSockets: accessory.context?.device?.useWebSockets !== false,
-        pollInterval: accessory.context?.device?.pollInterval || 10,
       }));
 
       return { accessories: devices };
@@ -206,6 +205,38 @@ class PluginUiServer extends HomebridgePluginUiServer {
         accessories: [],
         error: error.message,
       };
+    }
+  }
+
+  /**
+   * Handle a request to remove a cached accessory by host
+   */
+  async handleRemoveCachedAccessory(payload: { host: string }) {
+    try {
+      const fs = require('fs');
+      const path = require('path');
+
+      const storagePath = this.homebridgeStoragePath;
+      const cachedAccessoriesPath = path.join(storagePath, 'accessories', 'cachedAccessories');
+
+      if (!fs.existsSync(cachedAccessoriesPath)) {
+        return { status: 'ok', removed: 0 };
+      }
+
+      const cachedData = JSON.parse(fs.readFileSync(cachedAccessoriesPath, 'utf8'));
+
+      const filtered = cachedData.filter((accessory: any) => {
+        const isWled = accessory.plugin === 'homebridge-simpler-wled' || accessory.platform === 'WLED';
+        const matchesHost = accessory.context?.device?.host === payload.host;
+        return !(isWled && matchesHost);
+      });
+
+      fs.writeFileSync(cachedAccessoriesPath, JSON.stringify(filtered));
+
+      return { status: 'ok', removed: cachedData.length - filtered.length };
+    } catch (error: any) {
+      console.error('[UI Server] Error removing cached accessory:', error);
+      return { status: 'error', message: error.message };
     }
   }
 

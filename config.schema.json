@@ -27,14 +27,6 @@
         ],
         "description": "Set the logging level for the plugin. Debug mode provides detailed information for troubleshooting."
       },
-      "defaultPollInterval": {
-        "title": "Default Poll Interval (seconds)",
-        "type": "integer",
-        "default": 10,
-        "minimum": 5,
-        "maximum": 60,
-        "description": "Default polling interval in seconds for new devices when WebSockets are not available"
-      },
       "discoverySection": {
         "title": "Discovery Settings",
         "type": "object",
@@ -51,12 +43,6 @@
         "title": "Default Settings for Auto-Discovered Devices",
         "type": "object",
         "properties": {
-          "defaultUseSegments": {
-            "title": "Expose LED Segments",
-            "description": "Create separate accessories for LED segments on automatically discovered devices",
-            "type": "boolean",
-            "default": false
-          },
           "defaultUsePresetService": {
             "title": "Add Preset Controls",
             "description": "Create preset control accessory for automatically discovered devices",
@@ -68,13 +54,6 @@
             "description": "Use WebSockets for real-time updates on automatically discovered devices (requires WLED v0.13+)",
             "type": "boolean",
             "default": true
-          },
-          "defaultPollInterval": {
-            "title": "Poll Interval (seconds)",
-            "description": "Status polling interval in seconds for automatically discovered devices (if WebSockets not available)",
-            "type": "integer",
-            "default": 10,
-            "minimum": 1
           }
         }
       },
@@ -112,16 +91,15 @@
                   "default": true,
                   "description": "Enable or disable this device without removing it from configuration"
                 },
+                "firmwareVersion": {
+                  "title": "Firmware Version",
+                  "type": "string",
+                  "description": "WLED firmware version reported by the device (set automatically when adding via discovery)"
+                },
                 "deviceSettings": {
                   "type": "object",
                   "title": "Device Settings",
                   "properties": {
-                    "useSegments": {
-                      "title": "Expose LED Segments",
-                      "description": "Expose each LED segment as a separate accessory",
-                      "type": "boolean",
-                      "default": false
-                    },
                     "usePresetService": {
                       "title": "Add Preset Controls",
                       "description": "Create preset control accessory for this device",
@@ -133,13 +111,6 @@
                       "description": "Use WebSockets for real-time updates (requires WLED v0.13+)",
                       "type": "boolean",
                       "default": true
-                    },
-                    "pollInterval": {
-                      "title": "Poll Interval (seconds)",
-                      "description": "Status polling interval in seconds (if WebSockets not available)",
-                      "type": "integer",
-                      "default": 10,
-                      "minimum": 1
                     },
                     "enabledPresets": {
                       "title": "Enabled Presets",
