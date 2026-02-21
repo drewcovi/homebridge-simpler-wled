@@ -1,7 +1,7 @@
 {
   "name": "homebridge-simpler-wled",
   "displayName": "Simpler WLED",
-  "version": "2.0.7",
+  "version": "3.0.0",
   "description": "Homebridge plugin for WLED LED controllers",
   "main": "dist/index.js",
   "scripts": {
