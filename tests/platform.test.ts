@@ -6,6 +6,7 @@ import { MockLogger, MockAPI, createMockPlatformConfig, createMockDeviceConfig }
 jest.mock('../src/wledDevice');
 jest.mock('../src/discoveryService');
 jest.mock('../src/platformAccessory');
+jest.mock('../src/presetsAccessory');
 
 describe('WLEDPlatform', () => {
   let mockLogger: MockLogger;
@@ -169,15 +170,15 @@ describe('WLEDPlatform', () => {
 
       platform = new WLEDPlatform(mockLogger, config, mockApi as any);
 
-      // Simulate cached accessory
-      const mockAccessory = new mockApi.platformAccessory('Cached Device', 'uuid-192.168.1.100');
+      // Simulate cached light accessory
+      const mockAccessory = new mockApi.platformAccessory('Cached Device', 'uuid-192.168.1.100:light');
       mockAccessory.context.device = device;
 
       platform.configureAccessory(mockAccessory as any);
 
       mockApi.emit('didFinishLaunching');
 
-      expect(mockLogger.info).toHaveBeenCalledWith(expect.stringContaining('Restoring existing accessory'), expect.anything());
+      expect(mockLogger.info).toHaveBeenCalledWith(expect.stringContaining('Restoring existing light accessory'), expect.anything());
       expect(mockApi.updatePlatformAccessories).toHaveBeenCalled();
     });
 
@@ -218,8 +219,8 @@ describe('WLEDPlatform', () => {
 
       platform = new WLEDPlatform(mockLogger, config, mockApi as any);
 
-      // Simulate cached accessory with different presets
-      const mockAccessory = new mockApi.platformAccessory('Device', 'uuid-192.168.1.100');
+      // Simulate cached TV accessory with different presets
+      const mockAccessory = new mockApi.platformAccessory('Device', 'uuid-192.168.1.100:tv');
       mockAccessory.context.device = {
         ...device,
         deviceSettings: {
@@ -251,15 +252,15 @@ describe('WLEDPlatform', () => {
 
       platform = new WLEDPlatform(mockLogger, config, mockApi as any);
 
-      // Simulate cached accessory with same presets
-      const mockAccessory = new mockApi.platformAccessory('Device', 'uuid-192.168.1.100');
+      // Simulate cached TV accessory with same presets
+      const mockAccessory = new mockApi.platformAccessory('Device', 'uuid-192.168.1.100:tv');
       mockAccessory.context.device = device;
 
       platform.configureAccessory(mockAccessory as any);
 
       mockApi.emit('didFinishLaunching');
 
-      expect(mockLogger.info).toHaveBeenCalledWith(expect.stringContaining('Restoring existing accessory'), expect.anything());
+      expect(mockLogger.info).toHaveBeenCalledWith(expect.stringContaining('Restoring existing TV accessory'), expect.anything());
       expect(mockApi.unregisterPlatformAccessories).not.toHaveBeenCalled();
     });
   });
@@ -418,7 +419,8 @@ describe('WLEDPlatform', () => {
       platform = new WLEDPlatform(mockLogger, config, mockApi as any);
       mockApi.emit('didFinishLaunching');
 
-      expect(mockApi.hap.uuid.generate).toHaveBeenCalledWith('192.168.1.100');
+      expect(mockApi.hap.uuid.generate).toHaveBeenCalledWith('192.168.1.100:light');
+      expect(mockApi.hap.uuid.generate).toHaveBeenCalledWith('192.168.1.100:tv');
     });
   });
 });
