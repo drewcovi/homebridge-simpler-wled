@@ -1,4 +1,7 @@
+<DIV ALIGN="CENTER" STYLE="text-align:center">
 # Simpler WLED for Homebridge
+[![verified-by-homebridge](https://img.shields.io/badge/homebridge-verified-blueviolet?color=%23491F59&style=for-the-badge&logoColor=%23FFFFFF&logo=homebridge)](https://github.com/homebridge/homebridge/wiki/Verified-Plugins)
+</DIV>
 
 A Homebridge plugin for controlling WLED-powered LED strips through HomeKit.
 
