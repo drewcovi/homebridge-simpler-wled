@@ -32,6 +32,16 @@
     "esp32",
     "homekit"
   ],
+  "funding": [
+  {
+    "type" : "github",
+    "url" : "https://github.com/sponsors/drewcovi"
+  },
+  {
+    "type" : "paypal",
+    "url" : "https://paypal.me/drewcovi"
+  }
+  ],
   "author": "Drew Covi",
   "license": "MIT",
   "homepage": "https://github.com/drewcovi/homebridge-simpler-wled#readme",
