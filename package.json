@@ -1,7 +1,7 @@
 {
   "name": "homebridge-simpler-wled",
   "displayName": "Simpler WLED",
-  "version": "3.0.0",
+  "version": "3.1.0",
   "description": "Homebridge plugin for WLED LED controllers",
   "main": "dist/index.js",
   "scripts": {
@@ -33,14 +33,14 @@
     "homekit"
   ],
   "funding": [
-  {
-    "type" : "github",
-    "url" : "https://github.com/sponsors/drewcovi"
-  },
-  {
-    "type" : "paypal",
-    "url" : "https://paypal.me/drewcovi"
-  }
+    {
+      "type": "github",
+      "url": "https://github.com/sponsors/drewcovi"
+    },
+    {
+      "type": "paypal",
+      "url": "https://paypal.me/drewcovi"
+    }
   ],
   "author": "Drew Covi",
   "license": "MIT",
