@@ -108,7 +108,24 @@ export class WLEDPresetsAccessory {
     this.platform.log.info(`[DEBUG] Enabled presets for ${this.accessory.displayName}: ${JSON.stringify(enabledPresets)}`);
     this.platform.log.info(`[DEBUG] Filter by enabled: ${filterByEnabled}`);
 
-    for (const [presetIdStr, preset] of Object.entries(presets)) {
+    const sortedPresets = Object.entries(presets).filter(([presetIdStr]) => {
+      if (filterByEnabled && !enabledPresets.includes(presetIdStr)) {
+        this.platform.log.debug(`Skipping preset ${presetIdStr} - not in enabled presets list`);
+        return false;
+      }
+      return true;
+    });
+
+    const sortingMethod = this.getSortingMethod(
+      this.accessory.context.device?.deviceSettings?.presetSorting ??
+        this.platform.config.defaultSettingsSection?.defaultPresetSorting ??
+        'id',
+      enabledPresets
+    );
+
+    sortedPresets.sort(sortingMethod);
+
+    for (const [presetIdStr, preset] of sortedPresets) {
       this.platform.log.info(`[DEBUG] Processing preset - presetIdStr: "${presetIdStr}"`);
 
       const presetId = parseInt(presetIdStr, 10);
@@ -119,22 +136,15 @@ export class WLEDPresetsAccessory {
         continue;
       }
 
-      if (filterByEnabled && !enabledPresets.includes(presetIdStr)) {
-        this.platform.log.debug(`Skipping preset ${presetId} - not in enabled presets list`);
-        continue;
-      }
-
       this.platform.log.info(`[DEBUG] Preset data.n: "${preset.data?.n}", data.ql: "${preset.data?.ql}"`);
 
       this.presetInputMap.set(presetId, presetId);
       this.inputPresetMap.set(presetId, presetId);
 
       const serviceName = `Preset ${presetId}`;
-      const n = preset.data?.n || `Preset ${presetId}`;
-      const ql = preset.data?.ql || '';
-      const label = (ql ? `${ql} ` : '') + `${n}`;
+      const label = this.getPresetLabel(presetIdStr, preset.data);
 
-      this.platform.log.info(`[DEBUG] Creating preset - ID: ${presetId}, serviceName: "${serviceName}", label: "${label}" (ql: "${ql}", n: "${n}"`);
+      this.platform.log.info(`[DEBUG] Creating preset - ID: ${presetId}, serviceName: "${serviceName}", label: "${label}"`);
 
       const inputService = this.accessory.getService(serviceName) ||
         this.accessory.addService(this.platform.Service.InputSource, label, label);
@@ -208,5 +218,37 @@ export class WLEDPresetsAccessory {
 
   async setRemoteKey(_value: CharacteristicValue): Promise<void> {
     // No-op: remote key presses are not handled
+  }
+
+  private getSortingMethod(method: 'id' | 'name', explicitOrder?: string[]): (a: [string, any], b: [string, any]) => number {
+    if (explicitOrder && explicitOrder.length > 0) {
+      this.platform.log.info(`[DEBUG] Sorting presets by explicit order: ${JSON.stringify(explicitOrder)}`);
+      const orderMap = new Map<string, number>();
+      explicitOrder.forEach((id, index) => orderMap.set(id, index));
+      return (a, b) => {
+        const aIndex = orderMap.has(a[0]) ? orderMap.get(a[0])! : Number.POSITIVE_INFINITY;
+        const bIndex = orderMap.has(b[0]) ? orderMap.get(b[0])! : Number.POSITIVE_INFINITY;
+        return aIndex - bIndex;
+      };
+    }
+    if (method === 'id') {
+      this.platform.log.info('[DEBUG] Sorting presets by ID');
+      return (a, b) => parseInt(a[0], 10) - parseInt(b[0], 10);
+    }
+    if (method === 'name') {
+      this.platform.log.info('[DEBUG] Sorting presets by name');
+      return (a, b) => this.getPresetLabel(...a).localeCompare(this.getPresetLabel(...b));
+    }
+    throw new Error(`Invalid sorting method: ${method}`);
+  }
+
+  private getPresetLabel(presetId: string, preset: {data: {n?: string; ql?: string}}): string {
+    const n = preset.data?.n || `Preset ${presetId}`;
+    const ql = preset.data?.ql || '';
+    const label = (ql ? `${ql} ` : '') + `${n}`;
+
+    this.platform.log.info(`[DEBUG] Generated label "${label}" for preset ID ${presetId}`);
+
+    return label;
   }
 }
