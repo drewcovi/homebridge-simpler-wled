@@ -72,7 +72,7 @@ The simplest configuration - just add devices manually:
 
 ```json
 {
-  "platform": "WLED",
+  "platform": "Simpler WLED",
   "name": "WLED",
   "manualDevicesSection": {
     "devices": [
@@ -386,7 +386,7 @@ Enable debug logging to troubleshoot issues:
 
 ```json
 {
-  "platform": "WLED",
+  "platform": "Simpler WLED",
   "logLevel": "debug"
 }
 ```
