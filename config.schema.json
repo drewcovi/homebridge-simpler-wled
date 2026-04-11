@@ -54,6 +54,16 @@
             "description": "Use WebSockets for real-time updates on automatically discovered devices (requires WLED v0.13+)",
             "type": "boolean",
             "default": true
+          },
+          "defaultPresetSorting": {
+            "title": "Preset Sorting Method",
+            "description": "Default method for sorting presets in HomeKit. 'id' sorts by preset ID, 'name' sorts alphabetically by preset name. No effect if `enabledPresets` is set.",
+            "type": "string",
+            "default": "id",
+            "oneOf": [
+              { "title": "Sort by ID", "enum": ["id"] },
+              { "title": "Sort by Name", "enum": ["name"] }
+            ]
           }
         }
       },
@@ -120,6 +130,16 @@
                         "type": "string"
                       },
                       "default": []
+                    },
+                    "presetSorting": {
+                      "title": "Preset Sorting Method",
+                      "description": "Method for sorting presets in HomeKit. 'id' sorts by preset ID, 'name' sorts alphabetically by preset name. No effect if `enabledPresets` is set.",
+                      "type": "string",
+                      "default": "id",
+                      "oneOf": [
+                        { "title": "Sort by ID", "enum": ["id"] },
+                        { "title": "Sort by Name", "enum": ["name"] }
+                      ]
                     }
                   }
                 }

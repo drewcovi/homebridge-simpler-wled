@@ -927,7 +927,7 @@ export class WLEDDevice {
       this.presets = {};
 
       for (const [id, data] of Object.entries(rawPresets)) {
-        if (typeof data === 'object' && data !== null) {
+        if (typeof data === 'object' && data !== null && Object.keys(data).length !== 0) {
           // Extract name (n) and quick label (ql) for the preset
           const n = ('n' in data && typeof data.n === 'string') ? data.n : `Preset ${id}`;
           const ql = ('ql' in data && typeof data.ql === 'string') ? data.ql : '';

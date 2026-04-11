@@ -99,7 +99,8 @@ Complete configuration showing all available options:
     "defaultUseSegments": false,
     "defaultUsePresetService": true,
     "defaultUseWebSockets": true,
-    "defaultPollInterval": 10
+    "defaultPollInterval": 10,
+    "defaultPresetSorting": "id"
   },
   "manualDevicesSection": {
     "devices": [
@@ -113,7 +114,8 @@ Complete configuration showing all available options:
           "usePresetService": true,
           "useWebSockets": true,
           "pollInterval": 10,
-          "enabledPresets": ["1", "2", "3"]
+          "enabledPresets": ["1", "2", "3"],
+          "presetSorting": "name"
         }
       },
       {
@@ -150,6 +152,7 @@ Settings in `defaultSettingsSection` apply to devices added through the Discover
 | `defaultUsePresetService` | boolean | Add preset controls for discovered devices | `true` | No |
 | `defaultUseWebSockets` | boolean | Use WebSockets for discovered devices | `true` | No |
 | `defaultPollInterval` | integer | Polling interval for discovered devices (seconds) | `10` | No |
+| `defaultPresetSorting` | string | Default method for sorting presets in HomeKit ("id" or "name"); no effect if `enabledPresets` is set (that order will be used) | `"id"` | No |
 
 ### Manual Device Configuration
 
@@ -173,6 +176,7 @@ Settings in `deviceSettings` object control individual device behavior:
 | `useWebSockets` | boolean | Use WebSockets for real-time updates (requires WLED v0.13+) | `true` | No |
 | `pollInterval` | integer | How often to poll for state updates (seconds) | `10` | No |
 | `enabledPresets` | array | Array of preset IDs to expose (e.g., `["1", "2", "3"]`). Configure via UI. | `[]` | No |
+| `presetSorting` | string | Method for sorting presets in HomeKit ("id" or "name"); no effect if `enabledPresets` is set (that order will be used) | `"id"` | No |
 
 ## Feature Details
 
