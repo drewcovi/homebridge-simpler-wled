@@ -1070,7 +1070,8 @@
           ...(macAddress ? { macAddress } : {}),
           ...(ledCount ? { ledCount } : {}),
           deviceSettings: {
-            usePresetService: true,
+            enablePresetService: true,
+            enableLightService: true,
             useWebSockets: true,
           }
         };

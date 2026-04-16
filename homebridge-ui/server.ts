@@ -194,7 +194,8 @@ class PluginUiServer extends HomebridgePluginUiServer {
         host: accessory.context?.device?.host || 'Unknown',
         port: accessory.context?.device?.port || 80,
         uuid: accessory.UUID,
-        usePresetService: accessory.context?.device?.usePresetService !== false,
+        enablePresetService: accessory.context?.device?.enablePresetService !== false,
+        enableLightService: accessory.context?.device?.enableLightService !== false,
         useWebSockets: accessory.context?.device?.useWebSockets !== false,
       }));
 

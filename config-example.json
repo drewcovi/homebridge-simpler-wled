@@ -15,7 +15,8 @@
       },
       "defaultSettingsSection": {
         "defaultUseSegments": false,
-        "defaultUsePresetService": true,
+        "defaultEnablePresetService": true,
+        "defaultEnableLightService": true,
         "defaultUseWebSockets": true,
         "defaultPollInterval": 10
       },
@@ -27,7 +28,8 @@
             "port": 80,
             "deviceSettings": {
               "useSegments": true,
-              "usePresetService": true,
+              "enablePresetService": true,
+              "enableLightService": true,
               "useWebSockets": true,
               "pollInterval": 5
             }
