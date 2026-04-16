@@ -43,9 +43,15 @@
         "title": "Default Settings for Auto-Discovered Devices",
         "type": "object",
         "properties": {
-          "defaultUsePresetService": {
+          "defaultEnablePresetService": {
             "title": "Add Preset Controls",
             "description": "Create preset control accessory for automatically discovered devices",
+            "type": "boolean",
+            "default": true
+          },
+          "defaultEnableLightService": {
+            "title": "Add Light Controls",
+            "description": "Create light (brightness/color) control accessory for automatically discovered devices",
             "type": "boolean",
             "default": true
           },
@@ -100,9 +106,15 @@
                   "type": "object",
                   "title": "Device Settings",
                   "properties": {
-                    "usePresetService": {
+                    "enablePresetService": {
                       "title": "Add Preset Controls",
                       "description": "Create preset control accessory for this device",
+                      "type": "boolean",
+                      "default": true
+                    },
+                    "enableLightService": {
+                      "title": "Add Light Controls",
+                      "description": "Create light (brightness/color) control accessory for this device",
                       "type": "boolean",
                       "default": true
                     },

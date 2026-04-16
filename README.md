@@ -97,7 +97,8 @@ Complete configuration showing all available options:
   "defaultPollInterval": 10,
   "defaultSettingsSection": {
     "defaultUseSegments": false,
-    "defaultUsePresetService": true,
+    "defaultEnablePresetService": true,
+    "defaultEnableLightService": true,
     "defaultUseWebSockets": true,
     "defaultPollInterval": 10
   },
@@ -110,7 +111,8 @@ Complete configuration showing all available options:
         "enabled": true,
         "deviceSettings": {
           "useSegments": false,
-          "usePresetService": true,
+          "enablePresetService": true,
+          "enableLightService": true,
           "useWebSockets": true,
           "pollInterval": 10,
           "enabledPresets": ["1", "2", "3"]
@@ -121,7 +123,7 @@ Complete configuration showing all available options:
         "host": "wled-bedroom.local",
         "deviceSettings": {
           "useSegments": true,
-          "usePresetService": true
+          "enablePresetService": true
         }
       }
     ]
@@ -147,7 +149,8 @@ Settings in `defaultSettingsSection` apply to devices added through the Discover
 | Property | Type | Description | Default | Required |
 |----------|------|-------------|---------|----------|
 | `defaultUseSegments` | boolean | Expose LED segments for discovered devices | `false` | No |
-| `defaultUsePresetService` | boolean | Add preset controls for discovered devices | `true` | No |
+| `defaultEnablePresetService` | boolean | Add preset controls for discovered devices | `true` | No |
+| `defaultEnableLightService` | boolean | Add light controls for discovered devices | `true` | No |
 | `defaultUseWebSockets` | boolean | Use WebSockets for discovered devices | `true` | No |
 | `defaultPollInterval` | integer | Polling interval for discovered devices (seconds) | `10` | No |
 
@@ -169,7 +172,8 @@ Settings in `deviceSettings` object control individual device behavior:
 | Property | Type | Description | Default | Required |
 |----------|------|-------------|---------|----------|
 | `useSegments` | boolean | Expose each LED segment as a separate accessory | `false` | No |
-| `usePresetService` | boolean | Add preset selector controls | `true` | No |
+| `enablePresetService` | boolean | Add preset selector controls | `true` | No |
+| `enableLightService` | boolean | Add light controls (power, brightness, color) | `true` | No |
 | `useWebSockets` | boolean | Use WebSockets for real-time updates (requires WLED v0.13+) | `true` | No |
 | `pollInterval` | integer | How often to poll for state updates (seconds) | `10` | No |
 | `enabledPresets` | array | Array of preset IDs to expose (e.g., `["1", "2", "3"]`). Configure via UI. | `[]` | No |
@@ -212,7 +216,7 @@ By default, this plugin creates preset controls for each WLED device, allowing y
 ```json
 {
   "deviceSettings": {
-    "usePresetService": true
+    "enablePresetService": true
   }
 }
 ```
@@ -221,7 +225,7 @@ By default, this plugin creates preset controls for each WLED device, allowing y
 ```json
 {
   "deviceSettings": {
-    "usePresetService": true,
+    "enablePresetService": true,
     "enabledPresets": ["1", "2", "5"]
   }
 }
@@ -230,13 +234,26 @@ By default, this plugin creates preset controls for each WLED device, allowing y
 **Tip:** Use the Discovery UI's preset manager to easily select which presets to enable!
 
 **Disabling Presets:**
-If you don't want preset controls, set `usePresetService` to `false`:
+If you don't want preset controls, set `enablePresetService` to `false`:
 ```json
 {
   "deviceSettings": {
-    "usePresetService": false
+    "enablePresetService": false
   }
 }
+```
+
+### Light controls
+By default, the plugin creates a light accessory for each WLED device that allows you to control power, brightness, and color like a standard lightbulb.
+
+If you don't want this, set `enableLightService` to `false` in the device settings:
+```json
+{
+  "deviceSettings": {
+    "enableLightService": false
+  }
+}
+```
 
 ### WebSocket Support
 
@@ -337,7 +354,7 @@ For devices that can't be discovered automatically, or if you prefer explicit co
 **Problem:** WLED presets don't show up or aren't updating in HomeKit
 
 **Solutions:**
-- Ensure `usePresetService` is set to `true` (it's enabled by default)
+- Ensure `enablePresetService` is set to `true` (it's enabled by default)
 - Create presets in your WLED device first (they must exist to be discovered)
 - If using `enabledPresets`, verify the preset IDs are correct (e.g., `["1", "2", "3"]`)
 - Restart Homebridge to refresh preset list

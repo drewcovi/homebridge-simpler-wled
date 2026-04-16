@@ -123,12 +123,18 @@ export class WLEDPlatform implements DynamicPlatformPlugin {
 
       // Get settings from either nested or flat config structure
       const defaultSettings = this.config.defaultSettingsSection || {};
-      const defaultPollInterval = defaultSettings.defaultPollInterval !== undefined
-        ? defaultSettings.defaultPollInterval
-        : this.config.defaultPollInterval || 10;
-      const defaultUseWebSockets = defaultSettings.defaultUseWebSockets !== undefined
-        ? defaultSettings.defaultUseWebSockets
-        : this.config.defaultUseWebSockets !== false;
+      const defaultPollInterval =
+        defaultSettings.defaultPollInterval ?? this.config.defaultPollInterval ?? 10;
+      const defaultUseWebSockets =
+        defaultSettings.defaultUseWebSockets ?? this.config.defaultUseWebSockets ?? true;
+      const enablePresetService =
+        defaultSettings.defaultEnablePresetService ??
+        this.config.defaultEnablePresetService ??
+        true;
+      const enableLightService =
+        defaultSettings.defaultEnableLightService ??
+        defaultSettings.defaultEnableLightService ??
+        true;
 
       // Create the WLED device instance
       const wledDevice = new WLEDDevice(
@@ -146,13 +152,24 @@ export class WLEDPlatform implements DynamicPlatformPlugin {
       const deviceContext = { name: displayName, host: device.host, port: device.port };
 
       // --- Light accessory ---
-      const existingLightAccessory = this.accessories.find(a => a.UUID === lightUuid);
-      if (existingLightAccessory) {
-        this.log.info('Restoring existing light accessory from cache:', existingLightAccessory.displayName);
+      const existingLightAccessory = this.accessories.find((a) => a.UUID === lightUuid);
+      if (existingLightAccessory && !enableLightService) {
+        this.log.info(
+          'Unregistering existing light accessory (light service disabled):',
+          existingLightAccessory.displayName,
+        );
+        this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [
+          existingLightAccessory,
+        ]);
+      } else if (existingLightAccessory) {
+        this.log.info(
+          'Restoring existing light accessory from cache:',
+          existingLightAccessory.displayName,
+        );
         existingLightAccessory.context.device = deviceContext;
         new WLEDLightAccessory(this, existingLightAccessory, wledDevice);
         this.api.updatePlatformAccessories([existingLightAccessory]);
-      } else {
+      } else if (enableLightService) {
         this.log.info('Adding new light accessory:', displayName);
         const lightAccessory = new this.api.platformAccessory(displayName, lightUuid);
         lightAccessory.context.device = deviceContext;
@@ -162,13 +179,22 @@ export class WLEDPlatform implements DynamicPlatformPlugin {
 
       // --- Presets/TV accessory ---
       const tvDisplayName = displayName + ' Presets';
-      const existingTVAccessory = this.accessories.find(a => a.UUID === tvUuid);
-      if (existingTVAccessory) {
-        this.log.info('Restoring existing TV accessory from cache:', existingTVAccessory.displayName);
+      const existingTVAccessory = this.accessories.find((a) => a.UUID === tvUuid);
+      if (existingTVAccessory && !enablePresetService) {
+        this.log.info(
+          'Unregistering existing TV accessory (preset service disabled):',
+          existingTVAccessory.displayName,
+        );
+        this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [existingTVAccessory]);
+      } else if (existingTVAccessory) {
+        this.log.info(
+          'Restoring existing TV accessory from cache:',
+          existingTVAccessory.displayName,
+        );
         existingTVAccessory.context.device = deviceContext;
         new WLEDPresetsAccessory(this, existingTVAccessory, wledDevice);
         this.api.updatePlatformAccessories([existingTVAccessory]);
-      } else {
+      } else if (enablePresetService) {
         this.log.info('Adding new TV accessory:', tvDisplayName);
         const tvAccessory = new this.api.platformAccessory(tvDisplayName, tvUuid, this.api.hap.Categories.TELEVISION);
         tvAccessory.context.device = deviceContext;
@@ -248,9 +274,19 @@ export class WLEDPlatform implements DynamicPlatformPlugin {
 
       const deviceContext = { ...device, name: displayName };
 
+      const enableLightService =
+        (deviceSettings.enableLightService ??
+          this.config.defaultSettingSection?.defaultEnableLightService) !== false;
+      const enablePresetService =
+        (deviceSettings.enablePresetService ??
+          this.config.defaultSettingSection?.defaultEnablePresetService) !== false;
+
       // --- Light accessory ---
       const existingLightAccessory = this.accessories.find(a => a.UUID === lightUuid);
-      if (existingLightAccessory) {
+      if (existingLightAccessory && !enableLightService) {
+        this.log.info('Unregistering existing light accessory (light service disabled):', existingLightAccessory.displayName);
+        this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [existingLightAccessory]);
+      } else if (existingLightAccessory) {
         this.log.info('Restoring existing light accessory from cache:', existingLightAccessory.displayName);
         if (existingLightAccessory.displayName !== displayName) {
           this.log.info(`Updating display name from "${existingLightAccessory.displayName}" to "${displayName}"`);
@@ -259,7 +295,7 @@ export class WLEDPlatform implements DynamicPlatformPlugin {
         existingLightAccessory.context.device = deviceContext;
         new WLEDLightAccessory(this, existingLightAccessory, wledDevice);
         this.api.updatePlatformAccessories([existingLightAccessory]);
-      } else {
+      } else if (enableLightService) {
         this.log.info('Adding new light accessory:', displayName);
         const lightAccessory = new this.api.platformAccessory(displayName, lightUuid);
         lightAccessory.context.device = deviceContext;
@@ -276,7 +312,10 @@ export class WLEDPlatform implements DynamicPlatformPlugin {
       const newEnabledPresets = device.deviceSettings?.enabledPresets || [];
       const presetsChanged = JSON.stringify([...oldEnabledPresets].sort()) !== JSON.stringify([...newEnabledPresets].sort());
 
-      if (existingTVAccessory) {
+      if (existingTVAccessory && !enablePresetService) {
+        this.log.info('Unregistering existing TV accessory (preset service disabled):', existingTVAccessory.displayName);
+        this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [existingTVAccessory]);
+      } else if (existingTVAccessory) {
         if (presetsChanged) {
           this.log.info(`Enabled presets changed for ${displayName}. Re-registering TV accessory to force Home app refresh...`);
           this.log.debug(`Old presets: ${JSON.stringify(oldEnabledPresets)}`);
@@ -304,7 +343,7 @@ export class WLEDPlatform implements DynamicPlatformPlugin {
           new WLEDPresetsAccessory(this, existingTVAccessory, wledDevice);
           this.api.updatePlatformAccessories([existingTVAccessory]);
         }
-      } else {
+      } else if (enablePresetService) {
         this.log.info('Adding new TV accessory:', tvDisplayName);
         const tvAccessory = new this.api.platformAccessory(tvDisplayName, tvUuid, this.api.hap.Categories.TELEVISION);
         tvAccessory.context.device = deviceContext;

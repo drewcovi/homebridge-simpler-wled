@@ -39,7 +39,6 @@ If auto-discovery doesn't find your devices, you can add them manually:
         "port": 80,
         "deviceSettings": {
           "useSegments": false,
-          "usePresetService": true,
           "useWebSockets": true,
           "pollInterval": 10
         }
